@@ -11,17 +11,15 @@ import { screenshotStyles as s } from './ScreenshotPreview.styles'
 
 interface Props {
   src: string
-  price: number | null
-  currency: string
 }
 
-export default function ScreenshotPreview({ src, price, currency }: Props) {
+export default function ScreenshotPreview({ src }: Props) {
   const t = useT()
   const [open, setOpen] = useState(false)
 
   return (
     <>
-      {/* Превью */}
+      {/* Thumbnail */}
       <Box onClick={() => setOpen(true)} sx={s.wrapper}>
         <Box component="img" src={src} alt={t('screenshotAlt')} sx={s.image} />
 
@@ -32,13 +30,6 @@ export default function ScreenshotPreview({ src, price, currency }: Props) {
           </Typography>
         </Box>
 
-        {price && (
-          <Box sx={s.priceBar}>
-            <Typography variant="body2" color="white" fontWeight={700} fontSize="0.9rem">
-              {price.toLocaleString('ru-RU')} {currency}
-            </Typography>
-          </Box>
-        )}
       </Box>
 
       {/* Lightbox */}

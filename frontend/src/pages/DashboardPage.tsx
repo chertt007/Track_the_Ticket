@@ -7,14 +7,30 @@ import SearchOffIcon from '@mui/icons-material/SearchOff'
 import AddIcon from '@mui/icons-material/Add'
 import { useAppSelector } from '../hooks'
 import { useT } from '../hooks/useT'
+import { useLocale } from '../hooks/useLocale'
 import SubscriptionCard from '../components/SubscriptionCard'
 import AddSubscriptionModal from '../components/AddSubscriptionModal'
 import { dashboardStyles as s } from './DashboardPage.styles'
 
+/** Russian plural rules: 1 → one, 2-4 → few, 5+ → many */
+function ruPlural(n: number, one: string, few: string, many: string): string {
+  const mod10 = n % 10
+  const mod100 = n % 100
+  if (mod100 >= 11 && mod100 <= 19) return `${n} ${many}`
+  if (mod10 === 1) return `${n} ${one}`
+  if (mod10 >= 2 && mod10 <= 4) return `${n} ${few}`
+  return `${n} ${many}`
+}
+
 export default function DashboardPage() {
   const t = useT()
+  const locale = useLocale()
   const subscriptions = useAppSelector(st => st.subscriptions.items)
   const [modalOpen, setModalOpen] = useState(false)
+
+  const subscriptionCount = locale === 'ru-RU'
+    ? ruPlural(subscriptions.length, t('subscriptionOne'), t('subscriptionFew'), t('subscriptionMany'))
+    : `${subscriptions.length} ${subscriptions.length === 1 ? t('subscriptionOne') : t('subscriptionFew')}`
 
   return (
     <Box className="page-enter">
@@ -25,9 +41,7 @@ export default function DashboardPage() {
             {t('mySubscriptions')}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={s.subtitleText}>
-            {subscriptions.length > 0
-              ? `${subscriptions.length} ${subscriptions.length === 1 ? 'subscription' : 'subscriptions'}`
-              : t('noSubscriptionsHint')}
+            {subscriptions.length > 0 ? subscriptionCount : t('noSubscriptionsHint')}
           </Typography>
         </Box>
 

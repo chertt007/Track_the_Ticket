@@ -36,17 +36,7 @@ export const screenshotStyles = {
     gap: 1,
   } as SxProps<Theme>,
 
-  priceBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    background: `linear-gradient(to top, ${alpha(berryPalette.burgundy, 0.85)}, transparent)`,
-    px: 1.5,
-    py: 0.75,
-  } as SxProps<Theme>,
-
-  dialogPaper: {
+dialogPaper: {
     background: 'rgba(30,0,20,0.92)',
     backdropFilter: 'blur(20px)',
     borderRadius: 3,

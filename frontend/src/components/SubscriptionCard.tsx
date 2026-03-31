@@ -10,6 +10,7 @@ import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff'
 import FlightLandIcon from '@mui/icons-material/FlightLand'
 import LuggageIcon from '@mui/icons-material/Luggage'
 import { useT } from '../hooks/useT'
+import { useLocale } from '../hooks/useLocale'
 import { useAppDispatch, useAppSelector } from '../hooks'
 import { setCheckingId } from '../store/slices/subscriptionsSlice'
 import ScreenshotPreview from './ScreenshotPreview'
@@ -22,6 +23,7 @@ interface Props {
 
 export default function SubscriptionCard({ subscription: sub }: Props) {
   const t = useT()
+  const locale = useLocale()
   const dispatch = useAppDispatch()
   const checkingId = useAppSelector(st => st.subscriptions.checkingId)
   const isChecking = checkingId === sub.id
@@ -32,14 +34,14 @@ export default function SubscriptionCard({ subscription: sub }: Props) {
   }
 
   const formattedDate = sub.departureDate !== '—'
-    ? new Date(sub.departureDate).toLocaleDateString('ru-RU', {
+    ? new Date(sub.departureDate).toLocaleDateString(locale, {
         day: 'numeric', month: 'short', year: 'numeric',
       })
     : '—'
 
   return (
     <Card elevation={0} sx={s.card(sub.isActive)}>
-      {/* ── Информация о рейсе ─────────────────────────────────────────── */}
+      {/* ── Flight info ──────────────────────────────────────────────────── */}
       <Box sx={s.infoBox}>
         <Box sx={s.routeRow}>
           <Typography variant="h6" fontWeight={700} color="primary.dark" noWrap>
@@ -76,23 +78,21 @@ export default function SubscriptionCard({ subscription: sub }: Props) {
 
         <Typography variant="caption" color="text.secondary" sx={s.metaText}>
           #{sub.id} · {t('lastChecked')}: {sub.lastCheckedAt
-            ? new Date(sub.lastCheckedAt).toLocaleString('ru-RU', {
+            ? new Date(sub.lastCheckedAt).toLocaleString(locale, {
                 day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
               })
             : t('never')}
         </Typography>
       </Box>
 
-      {/* ── Скриншот ───────────────────────────────────────────────────── */}
+      {/* ── Screenshot ───────────────────────────────────────────────────── */}
       <Box sx={s.screenshotBox}>
         <ScreenshotPreview
           src={sub.mockScreenshotUrl ?? 'https://placehold.co/320x180/9B1B5A/white?text=No+data'}
-          price={sub.lastPrice}
-          currency={sub.currency}
         />
       </Box>
 
-      {/* ── Кнопка проверки ────────────────────────────────────────────── */}
+      {/* ── Check button ──────────────────────────────────────────────────── */}
       <Box sx={s.actionBox}>
         <Tooltip title={isChecking ? t('checking') : t('checkNow')}>
           <span>

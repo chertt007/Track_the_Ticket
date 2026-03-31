@@ -7,7 +7,10 @@ export const translations = {
 
     // Dashboard
     mySubscriptions: 'Мои подписки',
-    addSubscription: '+ Добавить подписку',
+    addSubscription: 'Добавить подписку',
+    subscriptionOne: 'подписка',
+    subscriptionFew: 'подписки',
+    subscriptionMany: 'подписок',
     noSubscriptions: 'Нет активных подписок',
     noSubscriptionsHint: 'Добавьте ссылку с Aviasales, чтобы начать отслеживать цены',
 
@@ -53,7 +56,10 @@ export const translations = {
 
     // Dashboard
     mySubscriptions: 'My Subscriptions',
-    addSubscription: '+ Add Subscription',
+    addSubscription: 'Add Subscription',
+    subscriptionOne: 'subscription',
+    subscriptionFew: 'subscriptions',
+    subscriptionMany: 'subscriptions',
     noSubscriptions: 'No active subscriptions',
     noSubscriptionsHint: 'Add an Aviasales link to start tracking prices',
 
