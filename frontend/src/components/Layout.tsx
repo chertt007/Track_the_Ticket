@@ -14,6 +14,7 @@ import { useAppDispatch, useAppSelector } from '../hooks'
 import { clearAuth } from '../store/slices/authSlice'
 import { useT } from '../hooks/useT'
 import SettingsMenu from './SettingsMenu'
+import InstallPromptBanner from './InstallPromptBanner'
 import { layoutStyles as s } from './Layout.styles'
 
 export default function Layout() {
@@ -98,6 +99,9 @@ export default function Layout() {
           <Outlet />
         </Container>
       </Box>
+
+      {/* PWA install prompt — appears automatically in supported browsers */}
+      <InstallPromptBanner />
     </Box>
   )
 }

@@ -65,6 +65,11 @@ export const translations = {
     russian: 'Русский',
     english: 'English',
 
+    // PWA install prompt
+    installTitle: 'Установить Track the Ticket',
+    installHint: 'Добавьте на рабочий стол — работает как приложение',
+    installAction: 'Установить',
+
     // Auth
     signInWithGoogle: 'Войти через Google',
     signingIn: 'Входим...',
@@ -139,6 +144,11 @@ export const translations = {
     language: 'Language',
     russian: 'Русский',
     english: 'English',
+
+    // PWA install prompt
+    installTitle: 'Install Track the Ticket',
+    installHint: 'Add to your desktop — works like a native app',
+    installAction: 'Install',
 
     // Auth
     signInWithGoogle: 'Sign in with Google',
