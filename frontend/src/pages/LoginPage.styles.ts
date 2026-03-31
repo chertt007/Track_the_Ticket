@@ -54,4 +54,16 @@ export const loginStyles = {
   googleButton: {
     mb: 2,
   } as SxProps<Theme>,
+
+  errorAlert: {
+    mb: 2,
+    textAlign: 'left',
+  } as SxProps<Theme>,
+
+  devButton: {
+    color: 'text.disabled',
+    fontSize: '0.72rem',
+    mt: 0.5,
+    '&:hover': { color: 'text.secondary' },
+  } as SxProps<Theme>,
 }

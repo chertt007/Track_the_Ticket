@@ -1,4 +1,6 @@
+import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material'
+import { berryPalette } from '../theme'
 
 export const layoutStyles = {
   root: {
@@ -38,10 +40,22 @@ export const layoutStyles = {
     fontSize: { xs: '0.85rem', sm: '0.95rem' },
   }),
 
-  loginButton: {
+  avatar: {
+    width: 30,
+    height: 30,
+    fontSize: '0.8rem',
+    fontWeight: 700,
     ml: 1,
+    background: alpha(berryPalette.rose, 0.35),
+    color: '#fff',
+    border: '1px solid rgba(255,255,255,0.3)',
+  } as SxProps<Theme>,
+
+  signOutButton: {
+    ml: 0.5,
     opacity: 0.85,
-    fontSize: { xs: '0.85rem', sm: '0.95rem' },
+    fontSize: { xs: '0.8rem', sm: '0.9rem' },
+    '&:hover': { opacity: 1 },
   } as SxProps<Theme>,
 
   main: {

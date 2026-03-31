@@ -3,15 +3,16 @@ import Layout from '../components/Layout'
 import LoginPage from './LoginPage'
 import DashboardPage from './DashboardPage'
 import SubscriptionDetailPage from './SubscriptionDetailPage'
+import AuthGuard from '../components/AuthGuard'
 
 export default function AppRouter() {
   return (
     <Routes>
-      {/* Pages without Layout */}
+      {/* Public pages */}
       <Route path="/login" element={<LoginPage />} />
 
-      {/* Pages with Layout (AppBar + navigation) */}
-      <Route element={<Layout />}>
+      {/* Protected pages — wrapped in AuthGuard */}
+      <Route element={<AuthGuard><Layout /></AuthGuard>}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/subscription/:id" element={<SubscriptionDetailPage />} />
       </Route>

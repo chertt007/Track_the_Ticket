@@ -64,6 +64,14 @@ export const translations = {
     language: 'Язык',
     russian: 'Русский',
     english: 'English',
+
+    // Auth
+    signInWithGoogle: 'Войти через Google',
+    signingIn: 'Входим...',
+    signOut: 'Выйти',
+    authSubtitle: 'Автоматический мониторинг цен на авиабилеты',
+    devBypass: 'Продолжить без авторизации (dev)',
+    authError: 'Ошибка авторизации. Попробуйте ещё раз.',
   },
 
   en: {
@@ -131,6 +139,14 @@ export const translations = {
     language: 'Language',
     russian: 'Русский',
     english: 'English',
+
+    // Auth
+    signInWithGoogle: 'Sign in with Google',
+    signingIn: 'Signing in...',
+    signOut: 'Sign out',
+    authSubtitle: 'Automatic flight price monitoring',
+    devBypass: 'Continue without auth (dev)',
+    authError: 'Authentication error. Please try again.',
   },
 }
 
