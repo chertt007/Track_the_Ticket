@@ -1,6 +1,6 @@
 import { GlobalStyles as MuiGlobalStyles } from '@mui/material'
 
-// Анимированные ягодные "блобы" на фоне
+// Animated berry blobs background
 const GlobalStyles = () =>
   MuiGlobalStyles({
     styles: {
@@ -12,7 +12,7 @@ const GlobalStyles = () =>
         borderRadius: 3,
       },
 
-      // Корневой фон — нежный розово-кремовый градиент
+      // Root background — soft pink-to-rose gradient
       'html, body, #root': {
         minHeight: '100vh',
         fontFamily: '"Poppins", "Roboto", sans-serif',
@@ -25,7 +25,7 @@ const GlobalStyles = () =>
         overflow: 'hidden',
       },
 
-      // Floating berry blobs — декоративные размытые пятна на фоне
+      // Floating berry blobs — decorative blurred background shapes
       'body::before': {
         content: '""',
         position: 'fixed',
@@ -55,10 +55,10 @@ const GlobalStyles = () =>
         zIndex: 0,
       },
 
-      // Контент поверх фона
+      // Content sits above blobs
       '#root': { position: 'relative', zIndex: 1 },
 
-      // Анимации blob-движений
+      // Blob drift animations
       '@keyframes blobDrift1': {
         '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
         '33%': { transform: 'translate(5vw, 8vh) scale(1.08)' },
@@ -70,7 +70,7 @@ const GlobalStyles = () =>
         '66%': { transform: 'translate(4vw, -8vh) scale(0.97)' },
       },
 
-      // Плавный fade-in для страниц
+      // Page transition fade-in
       '@keyframes fadeInUp': {
         from: { opacity: 0, transform: 'translateY(16px)' },
         to: { opacity: 1, transform: 'translateY(0)' },

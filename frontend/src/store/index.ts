@@ -1,8 +1,11 @@
 import { configureStore } from '@reduxjs/toolkit'
+import subscriptionsReducer from './slices/subscriptionsSlice'
+import settingsReducer from './slices/settingsSlice'
 
 export const store = configureStore({
   reducer: {
-    // slices will be added here as we build each feature
+    subscriptions: subscriptionsReducer,
+    settings: settingsReducer,
   },
 })
 

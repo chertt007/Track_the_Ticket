@@ -1,4 +1,4 @@
-// Domain types — will be expanded in FE-07 (API layer)
+// Domain types
 
 export interface Subscription {
   id: string
@@ -13,6 +13,10 @@ export interface Subscription {
   isActive: boolean
   checkFrequency: number
   lastCheckedAt: string | null
+  // mock fields (заменятся реальными данными в FE-07)
+  mockScreenshotUrl?: string
+  lastPrice: number | null
+  currency: string
 }
 
 export interface PriceHistory {

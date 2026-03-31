@@ -6,81 +6,55 @@ import Button from '@mui/material/Button'
 import Box from '@mui/material/Box'
 import Container from '@mui/material/Container'
 import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff'
+import { useT } from '../hooks/useT'
+import SettingsMenu from './SettingsMenu'
+import { layoutStyles as s } from './Layout.styles'
 
 export default function Layout() {
+  const t = useT()
   const navigate = useNavigate()
   const location = useLocation()
 
   const navLinks = [
-    { label: 'Dashboard', path: '/dashboard' },
+    { labelKey: 'dashboard' as const, path: '/dashboard' },
   ]
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      {/* ── AppBar ──────────────────────────────────────────────────────── */}
+    <Box sx={s.root}>
       <AppBar position="sticky" elevation={0}>
         <Container maxWidth="lg">
-          <Toolbar disableGutters sx={{ py: { xs: 0.5, sm: 1 } }}>
-            {/* Логотип */}
-            <Box
-              sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer', flexGrow: 1 }}
-              onClick={() => navigate('/dashboard')}
-            >
-              <FlightTakeoffIcon sx={{ fontSize: { xs: 22, sm: 26 } }} />
-              <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 700,
-                  fontSize: { xs: '1rem', sm: '1.2rem' },
-                  letterSpacing: '-0.01em',
-                }}
-              >
-                Track the Ticket
+          <Toolbar disableGutters sx={s.toolbar}>
+            {/* Logo */}
+            <Box sx={s.logoBox} onClick={() => navigate('/dashboard')}>
+              <FlightTakeoffIcon sx={s.logoIcon} />
+              <Typography variant="h6" sx={s.logoText}>
+                {t('appName')}
               </Typography>
             </Box>
 
-            {/* Навигация */}
+            {/* Nav links */}
             {navLinks.map(link => (
               <Button
                 key={link.path}
                 color="inherit"
                 onClick={() => navigate(link.path)}
-                sx={{
-                  fontWeight: location.pathname === link.path ? 700 : 400,
-                  opacity: location.pathname === link.path ? 1 : 0.8,
-                  borderBottom: location.pathname === link.path
-                    ? '2px solid rgba(255,255,255,0.8)'
-                    : '2px solid transparent',
-                  borderRadius: 0,
-                  px: 1.5,
-                  fontSize: { xs: '0.85rem', sm: '0.95rem' },
-                }}
+                sx={s.navButton(location.pathname === link.path)}
               >
-                {link.label}
+                {t(link.labelKey)}
               </Button>
             ))}
 
-            <Button
-              color="inherit"
-              onClick={() => navigate('/login')}
-              sx={{ ml: 1, opacity: 0.85, fontSize: { xs: '0.85rem', sm: '0.95rem' } }}
-            >
-              Login
+            <Button color="inherit" onClick={() => navigate('/login')} sx={s.loginButton}>
+              {t('login')}
             </Button>
+
+            {/* Settings icon */}
+            <SettingsMenu />
           </Toolbar>
         </Container>
       </AppBar>
 
-      {/* ── Контент ────────────────────────────────────────────────────── */}
-      <Box
-        component="main"
-        className="page-enter"
-        sx={{
-          flexGrow: 1,
-          py: { xs: 3, sm: 4, md: 5 },
-          px: { xs: 2, sm: 3 },
-        }}
-      >
+      <Box component="main" className="page-enter" sx={s.main}>
         <Container maxWidth="lg">
           <Outlet />
         </Container>
