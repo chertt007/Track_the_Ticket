@@ -27,6 +27,8 @@ export interface PriceHistory {
   s3Key: string | null
   checkedAt: string
   status: 'ok' | 'failed' | 'suspicious'
+  // mock field — will be replaced by presigned S3 URL from API in FE-07
+  mockScreenshotUrl?: string
 }
 
 export interface User {

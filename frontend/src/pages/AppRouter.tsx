@@ -7,10 +7,10 @@ import SubscriptionDetailPage from './SubscriptionDetailPage'
 export default function AppRouter() {
   return (
     <Routes>
-      {/* Страницы без Layout */}
+      {/* Pages without Layout */}
       <Route path="/login" element={<LoginPage />} />
 
-      {/* Страницы с Layout (AppBar + навигация) */}
+      {/* Pages with Layout (AppBar + navigation) */}
       <Route element={<Layout />}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/subscription/:id" element={<SubscriptionDetailPage />} />

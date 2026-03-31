@@ -9,6 +9,7 @@ import SyncIcon from '@mui/icons-material/Sync'
 import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff'
 import FlightLandIcon from '@mui/icons-material/FlightLand'
 import LuggageIcon from '@mui/icons-material/Luggage'
+import { useNavigate } from 'react-router-dom'
 import { useT } from '../hooks/useT'
 import { useLocale } from '../hooks/useLocale'
 import { useAppDispatch, useAppSelector } from '../hooks'
@@ -24,11 +25,13 @@ interface Props {
 export default function SubscriptionCard({ subscription: sub }: Props) {
   const t = useT()
   const locale = useLocale()
+  const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const checkingId = useAppSelector(st => st.subscriptions.checkingId)
   const isChecking = checkingId === sub.id
 
-  const handleCheck = () => {
+  const handleCheck = (e: React.MouseEvent) => {
+    e.stopPropagation()
     dispatch(setCheckingId(sub.id))
     setTimeout(() => dispatch(setCheckingId(null)), 2000)
   }
@@ -40,7 +43,7 @@ export default function SubscriptionCard({ subscription: sub }: Props) {
     : '—'
 
   return (
-    <Card elevation={0} sx={s.card(sub.isActive)}>
+    <Card elevation={0} sx={s.card(sub.isActive)} onClick={() => navigate(`/subscription/${sub.id}`)}>
       {/* ── Flight info ──────────────────────────────────────────────────── */}
       <Box sx={s.infoBox}>
         <Box sx={s.routeRow}>

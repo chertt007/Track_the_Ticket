@@ -11,7 +11,12 @@ export const cardStyles = {
     p: { xs: 2, sm: 3 },
     borderLeft: `4px solid ${isActive ? berryPalette.raspberry : alpha(berryPalette.rose, 0.4)}`,
     opacity: isActive ? 1 : 0.7,
+    cursor: 'pointer',
     transition: 'all 0.2s ease',
+    '&:hover': {
+      transform: 'translateY(-2px)',
+      boxShadow: `0 8px 32px ${alpha(berryPalette.berry, 0.15)}`,
+    },
   }),
 
   infoBox: {

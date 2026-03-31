@@ -35,11 +35,29 @@ export const translations = {
     add: 'Добавить',
     urlRequired: 'Введите ссылку',
     urlInvalid: 'Введите корректную ссылку (начинается с http)',
+    urlNotAviasales: 'Вставьте ссылку с Aviasales (aviasales.ru или aviasales.com)',
 
     // ScreenshotPreview
     screenshotAlt: 'Скриншот цены',
     clickToEnlarge: 'Нажмите для увеличения',
     close: 'Закрыть',
+
+    // SubscriptionDetailPage
+    backToDashboard: 'Назад',
+    flightInfo: 'Информация о рейсе',
+    priceHistory: 'История цен',
+    screenshots: 'Скриншоты',
+    noPriceData: 'Нет данных о ценах',
+    noScreenshots: 'Нет скриншотов',
+    subscriptionNotFound: 'Подписка не найдена',
+    currentPrice: 'Текущая цена',
+    minPrice: 'Минимум за 7 дней',
+    maxPrice: 'Максимум за 7 дней',
+    checkFrequencyLabel: 'Проверок в день',
+    sourceLink: 'Ссылка на Aviasales',
+    openLink: 'Открыть',
+    statusFailed: 'Ошибка',
+    statusOk: 'OK',
 
     // Settings
     settings: 'Настройки',
@@ -84,11 +102,29 @@ export const translations = {
     add: 'Add',
     urlRequired: 'Please enter a URL',
     urlInvalid: 'Please enter a valid URL (must start with http)',
+    urlNotAviasales: 'Please paste an Aviasales link (aviasales.ru or aviasales.com)',
 
     // ScreenshotPreview
     screenshotAlt: 'Price screenshot',
     clickToEnlarge: 'Click to enlarge',
     close: 'Close',
+
+    // SubscriptionDetailPage
+    backToDashboard: 'Back',
+    flightInfo: 'Flight Info',
+    priceHistory: 'Price History',
+    screenshots: 'Screenshots',
+    noPriceData: 'No price data yet',
+    noScreenshots: 'No screenshots yet',
+    subscriptionNotFound: 'Subscription not found',
+    currentPrice: 'Current price',
+    minPrice: '7-day low',
+    maxPrice: '7-day high',
+    checkFrequencyLabel: 'Checks per day',
+    sourceLink: 'Aviasales link',
+    openLink: 'Open',
+    statusFailed: 'Failed',
+    statusOk: 'OK',
 
     // Settings
     settings: 'Settings',

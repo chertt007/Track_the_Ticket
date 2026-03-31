@@ -22,7 +22,7 @@ const GlobalStyles = () =>
         background: 'linear-gradient(135deg, #FFF0F5 0%, #FFD6E7 30%, #FFADD0 60%, #F48FB1 100%)',
         backgroundAttachment: 'fixed',
         position: 'relative',
-        overflow: 'hidden',
+        overflowX: 'hidden',  // prevent horizontal scroll only; vertical scroll must work
       },
 
       // Floating berry blobs — decorative blurred background shapes
