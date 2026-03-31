@@ -3,6 +3,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 export interface AuthUser {
   sub: string
   email: string
+  picture?: string   // Google profile photo URL, comes from Cognito id-token claims
 }
 
 interface AuthState {

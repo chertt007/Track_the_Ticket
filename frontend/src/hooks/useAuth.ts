@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { fetchAuthSession, getCurrentUser } from 'aws-amplify/auth'
+import { fetchAuthSession, getCurrentUser, fetchUserAttributes } from 'aws-amplify/auth'
 import { Hub } from 'aws-amplify/utils'
 import { useAppDispatch } from './index'
 import { setAuth, clearAuth, setAuthLoading } from '../store/slices/authSlice'
@@ -8,11 +8,19 @@ import { setAuth, clearAuth, setAuthLoading } from '../store/slices/authSlice'
 // Called once on app mount via AuthProvider.
 async function resolveSession(dispatch: ReturnType<typeof useAppDispatch>) {
   try {
-    const [session, user] = await Promise.all([fetchAuthSession(), getCurrentUser()])
+    const [session, user, attributes] = await Promise.all([
+      fetchAuthSession(),
+      getCurrentUser(),
+      fetchUserAttributes(),
+    ])
     const token = session.tokens?.idToken?.toString() ?? null
     if (token) {
       dispatch(setAuth({
-        user: { sub: user.userId, email: user.signInDetails?.loginId ?? '' },
+        user: {
+          sub: user.userId,
+          email: user.signInDetails?.loginId ?? attributes.email ?? '',
+          picture: attributes.picture,   // Google profile photo URL
+        },
         token,
       }))
     } else {

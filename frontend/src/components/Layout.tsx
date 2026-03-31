@@ -66,10 +66,12 @@ export default function Layout() {
               </Button>
             ))}
 
-            {/* User avatar */}
+            {/* User avatar — shows Google profile photo when available */}
             {user && (
               <Tooltip title={user.email}>
-                <Avatar sx={s.avatar}>{avatarLetter}</Avatar>
+                <Avatar src={user.picture} sx={s.avatar}>
+                  {!user.picture && avatarLetter}
+                </Avatar>
               </Tooltip>
             )}
 
