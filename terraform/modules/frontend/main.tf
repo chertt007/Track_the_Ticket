@@ -1,6 +1,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Track the Ticket — Frontend Infrastructure
 # S3 (private) + CloudFront OAC + bucket policy
+# Screenshots: S3 (private) — written by Lambda, read via signed URLs
 # ─────────────────────────────────────────────────────────────────────────────
 
 terraform {
@@ -12,7 +13,7 @@ terraform {
   }
 }
 
-# ── S3 Bucket ─────────────────────────────────────────────────────────────────
+# ── Frontend S3 Bucket ────────────────────────────────────────────────────────
 
 resource "aws_s3_bucket" "frontend" {
   bucket = var.bucket_name
@@ -39,6 +40,44 @@ resource "aws_s3_bucket_versioning" "frontend" {
   bucket = aws_s3_bucket.frontend.id
   versioning_configuration {
     status = "Enabled"
+  }
+}
+
+# ── Screenshots S3 Bucket ─────────────────────────────────────────────────────
+
+resource "aws_s3_bucket" "screenshots" {
+  bucket = var.screenshots_bucket_name
+
+  tags = {
+    Project     = "TrackTheTicket"
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
+# Block all public access — access via Lambda IAM role only
+resource "aws_s3_bucket_public_access_block" "screenshots" {
+  bucket = aws_s3_bucket.screenshots.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# Lifecycle: delete screenshots older than 90 days to control costs
+resource "aws_s3_bucket_lifecycle_configuration" "screenshots" {
+  bucket = aws_s3_bucket.screenshots.id
+
+  rule {
+    id     = "expire-old-screenshots"
+    status = "Enabled"
+
+    filter {}
+
+    expiration {
+      days = 90
+    }
   }
 }
 
@@ -80,14 +119,14 @@ resource "aws_cloudfront_distribution" "frontend" {
 
   # React Router: serve index.html for all unknown paths (SPA fallback)
   custom_error_response {
-    error_code            = 403
-    response_code         = 200
-    response_page_path    = "/index.html"
+    error_code         = 403
+    response_code      = 200
+    response_page_path = "/index.html"
   }
   custom_error_response {
-    error_code            = 404
-    response_code         = 200
-    response_page_path    = "/index.html"
+    error_code         = 404
+    response_code      = 200
+    response_page_path = "/index.html"
   }
 
   restrictions {
@@ -112,12 +151,12 @@ resource "aws_cloudfront_distribution" "frontend" {
 resource "aws_cloudfront_cache_policy" "frontend" {
   name        = "${var.bucket_name}-cache-policy"
   min_ttl     = 0
-  default_ttl = 0      # HTML — no cache by default
+  default_ttl = 0       # HTML — no cache by default
   max_ttl     = 31536000 # Hashed assets can be cached up to 1 year
 
   parameters_in_cache_key_and_forwarded_to_origin {
-    cookies_config  { cookie_behavior = "none" }
-    headers_config  { header_behavior = "none" }
+    cookies_config { cookie_behavior = "none" }
+    headers_config { header_behavior = "none" }
     query_strings_config { query_string_behavior = "none" }
     enable_accept_encoding_gzip   = true
     enable_accept_encoding_brotli = true
