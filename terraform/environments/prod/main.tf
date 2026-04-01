@@ -47,13 +47,13 @@ module "frontend" {
   environment             = "prod"
 }
 
-# ── Networking: VPC + private subnets + security groups ──────────────────────
-# Uncomment when TF-05 is implemented
+# ── Networking: VPC + public/private subnets + security groups ───────────────
 
-# module "networking" {
-#   source      = "../../modules/networking"
-#   environment = "prod"
-# }
+module "networking" {
+  source      = "../../modules/networking"
+  environment = "prod"
+  aws_region  = "us-east-1"
+}
 
 # ── Auth: Cognito + Google OAuth 2.0 ─────────────────────────────────────────
 

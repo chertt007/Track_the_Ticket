@@ -42,6 +42,18 @@ output "google_redirect_uri" {
   value       = module.auth.google_redirect_uri
 }
 
+# ── Networking outputs ────────────────────────────────────────────────────────
+
+output "vpc_id" {
+  description = "VPC ID"
+  value       = module.networking.vpc_id
+}
+
+output "private_subnet_ids" {
+  description = "Private subnet IDs — used by RDS and Lambda"
+  value       = module.networking.private_subnet_ids
+}
+
 # ── Outputs added as modules are implemented ──────────────────────────────────
 
 # output "api_endpoint" {
