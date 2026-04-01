@@ -12,9 +12,11 @@ Amplify.configure({
         import.meta.env.VITE_COGNITO_CLIENT_ID ?? 'PLACEHOLDER_CLIENT_ID',
       loginWith: {
         oauth: {
-          domain:
+          // Amplify prepends https:// automatically — domain must NOT include the protocol
+          domain: (
             import.meta.env.VITE_COGNITO_DOMAIN ??
-            'placeholder.auth.us-east-1.amazoncognito.com',
+            'placeholder.auth.us-east-1.amazoncognito.com'
+          ).replace(/^https?:\/\//, ''),
           scopes: ['email', 'openid', 'profile'],
           redirectSignIn: [window.location.origin + '/dashboard'],
           redirectSignOut: [window.location.origin + '/login'],
