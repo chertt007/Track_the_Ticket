@@ -58,6 +58,17 @@ export const layoutStyles = {
     '&:hover': { opacity: 1 },
   } as SxProps<Theme>,
 
+  langToggle: {
+    ml: 0.5,
+    minWidth: 0,
+    px: 1,
+    fontSize: '0.8rem',
+    fontWeight: 700,
+    letterSpacing: '0.05em',
+    opacity: 0.85,
+    '&:hover': { opacity: 1, background: 'rgba(255,255,255,0.12)' },
+  } as SxProps<Theme>,
+
   main: {
     flexGrow: 1,
     py: { xs: 3, sm: 4, md: 5 },

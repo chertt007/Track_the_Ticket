@@ -12,6 +12,7 @@ import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff'
 import LogoutIcon from '@mui/icons-material/Logout'
 import { useAppDispatch, useAppSelector } from '../hooks'
 import { clearAuth } from '../store/slices/authSlice'
+import { setLanguage } from '../store/slices/settingsSlice'
 import { useT } from '../hooks/useT'
 import SettingsMenu from './SettingsMenu'
 import InstallPromptBanner from './InstallPromptBanner'
@@ -23,6 +24,7 @@ export default function Layout() {
   const location = useLocation()
   const dispatch = useAppDispatch()
   const user = useAppSelector(st => st.auth.user)
+  const language = useAppSelector(st => st.settings.language)
 
   const navLinks = [
     { labelKey: 'dashboard' as const, path: '/dashboard' },
@@ -85,6 +87,17 @@ export default function Layout() {
                 sx={s.signOutButton}
               >
                 {t('signOut')}
+              </Button>
+            </Tooltip>
+
+            {/* Language quick-toggle */}
+            <Tooltip title={language === 'en' ? 'Switch to Russian' : 'Переключить на English'}>
+              <Button
+                color="inherit"
+                onClick={() => dispatch(setLanguage(language === 'en' ? 'ru' : 'en'))}
+                sx={s.langToggle}
+              >
+                {language === 'en' ? 'EN' : 'RU'}
               </Button>
             </Tooltip>
 
