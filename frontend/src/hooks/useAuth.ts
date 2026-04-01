@@ -39,7 +39,15 @@ export function useAuth() {
 
   useEffect(() => {
     dispatch(setAuthLoading(true))
-    resolveSession(dispatch)
+
+    // If the URL contains ?code= we are on the OAuth callback — Amplify is
+    // exchanging the code for tokens asynchronously. Skip the immediate
+    // resolveSession call and wait for the Hub 'signedIn' event instead.
+    // Otherwise resolve the session right away (normal page load / refresh).
+    const isOAuthCallback = new URLSearchParams(window.location.search).has('code')
+    if (!isOAuthCallback) {
+      resolveSession(dispatch)
+    }
 
     // Listen for Cognito auth events (signIn, signOut, tokenRefresh)
     const unsubscribe = Hub.listen('auth', ({ payload }) => {
