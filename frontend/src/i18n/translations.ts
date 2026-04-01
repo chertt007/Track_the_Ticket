@@ -70,13 +70,54 @@ export const translations = {
     installHint: 'Добавьте на рабочий стол — работает как приложение',
     installAction: 'Установить',
 
-    // Auth
+    // Auth — Google
     signInWithGoogle: 'Войти через Google',
     signingIn: 'Входим...',
     signOut: 'Выйти',
     authSubtitle: 'Автоматический мониторинг цен на авиабилеты',
     devBypass: 'Продолжить без авторизации (dev)',
     authError: 'Ошибка авторизации. Попробуйте ещё раз.',
+
+    // Auth — email/password form
+    emailLabel: 'Email',
+    passwordLabel: 'Пароль',
+    confirmPasswordLabel: 'Подтвердите пароль',
+    signInButton: 'Войти',
+    orDivider: 'или',
+    forgotPasswordLink: 'Забыли пароль?',
+    registerLink: 'Зарегистрироваться',
+    emailRequired: 'Введите email',
+    passwordRequired: 'Введите пароль',
+    passwordMismatch: 'Пароли не совпадают',
+    codeRequired: 'Введите код',
+
+    // Auth — sign up
+    signUpTitle: 'Регистрация',
+    registerButton: 'Создать аккаунт',
+    alreadyHaveAccountLink: 'Уже есть аккаунт? Войти',
+
+    // Auth — confirm email
+    confirmSignUpTitle: 'Подтвердите email',
+    confirmSignUpHint: 'Код отправлен на',
+    codeLabel: 'Код из письма',
+    confirmButton: 'Подтвердить',
+    resendCodeLink: 'Отправить повторно',
+    codeSentAgain: 'Код отправлен повторно.',
+    confirmSuccessSignIn: 'Email подтверждён. Войдите.',
+
+    // Auth — forgot password
+    forgotPasswordTitle: 'Восстановление пароля',
+    forgotPasswordHint: 'Введите email — отправим код для сброса пароля.',
+    sendCodeButton: 'Отправить код',
+
+    // Auth — new password
+    newPasswordTitle: 'Новый пароль',
+    newPasswordLabel: 'Новый пароль',
+    savePasswordButton: 'Сохранить',
+    passwordResetDone: 'Пароль изменён. Войдите с новым паролем.',
+
+    // Auth — shared
+    backLink: 'Назад',
   },
 
   en: {
@@ -150,13 +191,54 @@ export const translations = {
     installHint: 'Add to your desktop — works like a native app',
     installAction: 'Install',
 
-    // Auth
+    // Auth — Google
     signInWithGoogle: 'Sign in with Google',
     signingIn: 'Signing in...',
     signOut: 'Sign out',
     authSubtitle: 'Automatic flight price monitoring',
     devBypass: 'Continue without auth (dev)',
     authError: 'Authentication error. Please try again.',
+
+    // Auth — email/password form
+    emailLabel: 'Email',
+    passwordLabel: 'Password',
+    confirmPasswordLabel: 'Confirm password',
+    signInButton: 'Sign in',
+    orDivider: 'or',
+    forgotPasswordLink: 'Forgot password?',
+    registerLink: 'Create account',
+    emailRequired: 'Please enter your email',
+    passwordRequired: 'Please enter your password',
+    passwordMismatch: 'Passwords do not match',
+    codeRequired: 'Please enter the code',
+
+    // Auth — sign up
+    signUpTitle: 'Create account',
+    registerButton: 'Create account',
+    alreadyHaveAccountLink: 'Already have an account? Sign in',
+
+    // Auth — confirm email
+    confirmSignUpTitle: 'Confirm your email',
+    confirmSignUpHint: 'Code sent to',
+    codeLabel: 'Verification code',
+    confirmButton: 'Confirm',
+    resendCodeLink: 'Resend code',
+    codeSentAgain: 'Code resent.',
+    confirmSuccessSignIn: 'Email confirmed. Please sign in.',
+
+    // Auth — forgot password
+    forgotPasswordTitle: 'Reset password',
+    forgotPasswordHint: 'Enter your email and we\'ll send a reset code.',
+    sendCodeButton: 'Send code',
+
+    // Auth — new password
+    newPasswordTitle: 'New password',
+    newPasswordLabel: 'New password',
+    savePasswordButton: 'Save',
+    passwordResetDone: 'Password changed. Please sign in.',
+
+    // Auth — shared
+    backLink: 'Back',
   },
 }
 

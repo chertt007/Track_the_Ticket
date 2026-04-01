@@ -66,4 +66,54 @@ export const loginStyles = {
     mt: 0.5,
     '&:hover': { color: 'text.secondary' },
   } as SxProps<Theme>,
+
+  // Email/password form
+  orDivider: {
+    my: 2,
+    opacity: 0.45,
+  } as SxProps<Theme>,
+
+  orText: {
+    px: 1,
+    color: 'text.disabled',
+    fontSize: '0.8rem',
+  } as SxProps<Theme>,
+
+  formBox: {
+    width: '100%',
+  } as SxProps<Theme>,
+
+  textField: {
+    mb: 1.5,
+  } as SxProps<Theme>,
+
+  submitButton: {
+    mt: 0.5,
+    mb: 1.5,
+  } as SxProps<Theme>,
+
+  linksRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    width: '100%',
+    mt: 0.5,
+  } as SxProps<Theme>,
+
+  linkButton: {
+    fontSize: '0.78rem',
+    color: 'text.secondary',
+    p: 0.5,
+    minWidth: 0,
+    '&:hover': { color: 'primary.main', background: 'none' },
+  } as SxProps<Theme>,
+
+  infoAlert: {
+    mb: 2,
+    textAlign: 'left',
+  } as SxProps<Theme>,
+
+  viewHint: {
+    mb: 2,
+    textAlign: 'left',
+  } as SxProps<Theme>,
 }
