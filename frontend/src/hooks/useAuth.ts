@@ -1,25 +1,25 @@
 import { useEffect } from 'react'
-import { fetchAuthSession, getCurrentUser, fetchUserAttributes } from 'aws-amplify/auth'
+import { fetchAuthSession } from 'aws-amplify/auth'
 import { Hub } from 'aws-amplify/utils'
 import { useAppDispatch } from './index'
 import { setAuth, clearAuth, setAuthLoading } from '../store/slices/authSlice'
 
 // Attempt to restore auth state from an existing Amplify session.
-// Called once on app mount via AuthProvider.
+// User info is read directly from the ID token payload — no extra API call needed.
+// fetchUserAttributes() requires the aws.cognito.signin.user.admin scope which
+// we intentionally exclude from the App Client for security.
 async function resolveSession(dispatch: ReturnType<typeof useAppDispatch>) {
   try {
-    const [session, user, attributes] = await Promise.all([
-      fetchAuthSession(),
-      getCurrentUser(),
-      fetchUserAttributes(),
-    ])
+    const session = await fetchAuthSession()
     const token = session.tokens?.idToken?.toString() ?? null
-    if (token) {
+    const payload = session.tokens?.idToken?.payload
+
+    if (token && payload) {
       dispatch(setAuth({
         user: {
-          sub: user.userId,
-          email: user.signInDetails?.loginId ?? attributes.email ?? '',
-          picture: attributes.picture,   // Google profile photo URL
+          sub: (payload['sub'] as string) ?? '',
+          email: (payload['email'] as string) ?? '',
+          picture: payload['picture'] as string | undefined,
         },
         token,
       }))
