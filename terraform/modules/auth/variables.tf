@@ -4,19 +4,18 @@ variable "environment" {
   default     = "prod"
 }
 
-variable "google_client_id" {
-  description = "Google OAuth 2.0 Client ID for Cognito IdP"
+variable "aws_region" {
+  description = "AWS region — used to build the Cognito domain URL"
   type        = string
-  sensitive   = true
-}
-
-variable "google_client_secret" {
-  description = "Google OAuth 2.0 Client Secret for Cognito IdP"
-  type        = string
-  sensitive   = true
+  default     = "us-east-1"
 }
 
 variable "callback_urls" {
-  description = "Allowed callback URLs after Cognito login (CloudFront URL)"
+  description = "Allowed redirect URLs after login (CloudFront URL + localhost for dev)"
+  type        = list(string)
+}
+
+variable "logout_urls" {
+  description = "Allowed redirect URLs after logout"
   type        = list(string)
 }

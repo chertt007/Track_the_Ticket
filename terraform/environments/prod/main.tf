@@ -56,15 +56,22 @@ module "frontend" {
 # }
 
 # ── Auth: Cognito + Google OAuth 2.0 ─────────────────────────────────────────
-# Uncomment when TF-AUTH-01 is implemented
 
-# module "auth" {
-#   source               = "../../modules/auth"
-#   environment          = "prod"
-#   google_client_id     = var.google_client_id
-#   google_client_secret = var.google_client_secret
-#   callback_urls        = [module.frontend.cloudfront_url]
-# }
+module "auth" {
+  source      = "../../modules/auth"
+  environment = "prod"
+  aws_region  = "us-east-1"
+
+  callback_urls = [
+    "${module.frontend.cloudfront_url}/dashboard",
+    "http://localhost:5173/dashboard",
+  ]
+
+  logout_urls = [
+    "${module.frontend.cloudfront_url}",
+    "http://localhost:5173",
+  ]
+}
 
 # ── Database: PostgreSQL RDS ──────────────────────────────────────────────────
 # Uncomment when TF-DB-01 is implemented

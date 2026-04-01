@@ -20,6 +20,28 @@ output "screenshots_bucket" {
   value       = module.frontend.screenshots_bucket_name
 }
 
+# ── Auth outputs ─────────────────────────────────────────────────────────────
+
+output "cognito_user_pool_id" {
+  description = "Cognito User Pool ID — add as VITE_COGNITO_USER_POOL_ID in GitHub Secrets"
+  value       = module.auth.user_pool_id
+}
+
+output "cognito_client_id" {
+  description = "Cognito App Client ID — add as VITE_COGNITO_CLIENT_ID in GitHub Secrets"
+  value       = module.auth.client_id
+}
+
+output "cognito_domain" {
+  description = "Cognito Hosted UI domain — add as VITE_COGNITO_DOMAIN in GitHub Secrets"
+  value       = module.auth.cognito_domain
+}
+
+output "google_redirect_uri" {
+  description = "Add this URI to Google OAuth App → Authorized redirect URIs"
+  value       = module.auth.google_redirect_uri
+}
+
 # ── Outputs added as modules are implemented ──────────────────────────────────
 
 # output "api_endpoint" {
