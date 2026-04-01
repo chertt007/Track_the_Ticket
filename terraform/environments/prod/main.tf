@@ -68,8 +68,8 @@ module "auth" {
   ]
 
   logout_urls = [
-    "${module.frontend.cloudfront_url}",
-    "http://localhost:5173",
+    "${module.frontend.cloudfront_url}/login",
+    "http://localhost:5173/login",
   ]
 }
 
