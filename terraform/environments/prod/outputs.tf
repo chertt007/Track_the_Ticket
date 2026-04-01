@@ -54,6 +54,18 @@ output "private_subnet_ids" {
   value       = module.networking.private_subnet_ids
 }
 
+# ── Database outputs ──────────────────────────────────────────────────────────
+
+output "db_endpoint" {
+  description = "RDS endpoint — copy to DB Access page in Notion"
+  value       = module.database.db_endpoint
+}
+
+output "db_secrets_manager_arn" {
+  description = "Secrets Manager ARN — add to Lambda IAM policy"
+  value       = module.database.secrets_manager_arn
+}
+
 # ── Outputs added as modules are implemented ──────────────────────────────────
 
 # output "api_endpoint" {

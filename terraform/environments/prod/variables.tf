@@ -24,17 +24,17 @@ variable "screenshots_bucket_name" {
 #   sensitive   = true
 # }
 
-# variable "db_username" {
-#   description = "RDS PostgreSQL master username"
-#   type        = string
-#   sensitive   = true
-# }
+variable "db_username" {
+  description = "RDS PostgreSQL master username"
+  type        = string
+  sensitive   = true
+}
 
-# variable "db_password" {
-#   description = "RDS PostgreSQL master password"
-#   type        = string
-#   sensitive   = true
-# }
+variable "db_password" {
+  description = "RDS PostgreSQL master password (min 8 chars)"
+  type        = string
+  sensitive   = true
+}
 
 # variable "ecr_image_uri" {
 #   description = "API Lambda ECR image URI — injected by CI/CD on deploy"

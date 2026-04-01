@@ -74,17 +74,19 @@ module "auth" {
 }
 
 # ── Database: PostgreSQL RDS ──────────────────────────────────────────────────
-# Uncomment when TF-DB-01 is implemented
 
-# module "database" {
-#   source                = "../../modules/database"
-#   environment           = "prod"
-#   db_name               = var.db_name
-#   db_username           = var.db_username
-#   db_password           = var.db_password
-#   private_subnet_ids    = module.networking.private_subnet_ids
-#   rds_security_group_id = module.networking.rds_security_group_id
-# }
+module "database" {
+  source      = "../../modules/database"
+  environment = "prod"
+
+  db_name     = "tracktheticket"
+  db_username = var.db_username
+  db_password = var.db_password
+
+  vpc_id                = module.networking.vpc_id
+  subnet_ids            = module.networking.public_subnet_ids  # Public subnets for dev public access
+  rds_security_group_id = module.networking.rds_security_group_id
+}
 
 # ── API: Lambda Docker + API Gateway HTTP v2 ──────────────────────────────────
 # Uncomment when TF-API-01 is implemented
