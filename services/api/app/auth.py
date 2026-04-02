@@ -1,7 +1,12 @@
+import base64
+
 import httpx
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicNumbers
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwk, jwt
+from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -22,34 +27,52 @@ _jwks_cache: dict | None = None
 bearer_scheme = HTTPBearer()
 
 
+def _rsa_jwk_to_pem(key: dict) -> bytes:
+    """Convert a Cognito RSA JWK to PEM bytes.
+
+    python-jose's jwk.construct() returns a jose.jwk.RSAKey object, but
+    jwt.decode() internally calls RSAAlgorithm.prepare_key() which only accepts
+    PEM bytes (str/bytes) or a native cryptography.RSAPublicKey — not a jose.jwk.RSAKey.
+    Passing the wrong type raises InvalidKeyError, silently wrapped into JWTError,
+    causing a spurious 401. We convert the JWK directly to PEM to avoid this.
+    """
+
+    def _b64url_to_int(s: str) -> int:
+        s += "=" * (-len(s) % 4)
+        return int.from_bytes(base64.urlsafe_b64decode(s), "big")
+
+    public_key = RSAPublicNumbers(
+        e=_b64url_to_int(key["e"]),
+        n=_b64url_to_int(key["n"]),
+    ).public_key(default_backend())
+
+    return public_key.public_bytes(
+        serialization.Encoding.PEM,
+        serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+
+
 async def _get_jwks() -> dict:
     global _jwks_cache
     if _jwks_cache is None:
-        logger.info("Fetching JWKS from Cognito", extra={"url": JWKS_URL})
+        logger.info(f"Fetching JWKS from Cognito | url={JWKS_URL}")
         async with httpx.AsyncClient() as client:
             response = await client.get(JWKS_URL)
             response.raise_for_status()
             _jwks_cache = response.json()
-        logger.info(
-            "JWKS fetched successfully",
-            extra={"key_ids": [k["kid"] for k in _jwks_cache.get("keys", [])]},
-        )
-    else:
-        logger.debug("Using cached JWKS")
+        available_kids = [k["kid"] for k in _jwks_cache.get("keys", [])]
+        logger.info(f"JWKS fetched | available_kids={available_kids}")
     return _jwks_cache
 
 
 async def _decode_token(token: str) -> dict:
-    # Log the token prefix so we can identify it without exposing the full value
     token_preview = token[:40] + "..." if len(token) > 40 else token
-    logger.debug("Decoding token", extra={"token_preview": token_preview})
 
     try:
         unverified_header = jwt.get_unverified_header(token)
     except JWTError as exc:
         logger.warning(
-            "Failed to parse token header — token is malformed",
-            extra={"error": str(exc), "token_preview": token_preview},
+            f"Token is malformed | error={exc!s} | token_preview={token_preview}"
         )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -58,54 +81,56 @@ async def _decode_token(token: str) -> dict:
 
     kid = unverified_header.get("kid")
     alg = unverified_header.get("alg")
-    logger.debug("Token header parsed", extra={"kid": kid, "alg": alg})
+    logger.info(f"Token header parsed | kid={kid} | alg={alg}")
 
     jwks = await _get_jwks()
     available_kids = [k["kid"] for k in jwks.get("keys", [])]
 
-    public_key = None
+    matched_key = None
     for key in jwks["keys"]:
         if key["kid"] == kid:
-            public_key = jwk.construct(key)
-            logger.debug("Matched public key", extra={"kid": kid, "kty": key.get("kty")})
+            matched_key = key
             break
 
-    if public_key is None:
+    if matched_key is None:
         logger.warning(
-            "No matching public key found for token",
-            extra={"token_kid": kid, "available_kids": available_kids},
+            f"No matching public key | token_kid={kid} | available_kids={available_kids}"
         )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Public key not found",
         )
 
+    logger.info(f"Matched public key | kid={kid}")
+
+    try:
+        pem_key = _rsa_jwk_to_pem(matched_key)
+    except Exception as exc:
+        logger.warning(
+            f"JWK to PEM conversion failed | error_type={type(exc).__name__} | error={exc!s} | kid={kid}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Failed to load public key",
+        )
+
     try:
         payload = jwt.decode(
             token,
-            public_key,
+            pem_key,
             algorithms=["RS256"],
             options={"verify_aud": False},
         )
-        logger.info(
-            "Token decoded successfully",
-            extra={"sub": payload.get("sub"), "email": payload.get("email")},
-        )
     except JWTError as exc:
         logger.warning(
-            "Token decode failed",
-            extra={
-                "error_type": type(exc).__name__,
-                "error_detail": str(exc),
-                "kid": kid,
-                "token_preview": token_preview,
-            },
+            f"Token decode failed | error_type={type(exc).__name__} | error={exc!s} | kid={kid}"
         )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token is invalid or expired",
         )
 
+    logger.info(f"Token decoded successfully | sub={payload.get('sub')} | email={payload.get('email')}")
     return payload
 
 
@@ -120,7 +145,7 @@ async def get_current_user(
     email: str = payload.get("email", "")
 
     if not cognito_id:
-        logger.warning("Token payload missing 'sub' field", extra={"payload_keys": list(payload.keys())})
+        logger.warning(f"Token payload missing sub | payload_keys={list(payload.keys())}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token payload",
@@ -130,12 +155,12 @@ async def get_current_user(
     user = result.scalar_one_or_none()
 
     if user is None:
-        logger.info("Creating new user from Cognito", extra={"cognito_id": cognito_id, "email": email})
+        logger.info(f"Creating new user | cognito_id={cognito_id} | email={email}")
         user = User(cognito_id=cognito_id, email=email)
         db.add(user)
         await db.commit()
         await db.refresh(user)
     else:
-        logger.debug("User found in DB", extra={"user_id": user.id, "cognito_id": cognito_id})
+        logger.info(f"User found | user_id={user.id} | cognito_id={cognito_id}")
 
     return user
