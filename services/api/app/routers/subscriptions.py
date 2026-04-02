@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import get_current_user
 from app.config import settings
 from app.dependencies import get_db
+from app.logging_config import get_logger
 from app.models.price_history import PriceHistory
 from app.models.subscription import Subscription
 from app.models.user import User
@@ -12,6 +13,7 @@ from app.schemas.price_history import PriceHistoryOut
 from app.schemas.subscription import SubscriptionCreate, SubscriptionOut
 
 router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
+logger = get_logger(__name__)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -27,6 +29,10 @@ async def _get_own_subscription(
     )
     subscription = result.scalar_one_or_none()
     if subscription is None or subscription.user_id != current_user.id:
+        logger.warning(
+            "subscription not found or access denied",
+            extra={"subscription_id": subscription_id, "user_id": current_user.id},
+        )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
     return subscription
 
@@ -50,6 +56,14 @@ async def create_subscription(
     db.add(subscription)
     await db.commit()
     await db.refresh(subscription)
+    logger.info(
+        "subscription created",
+        extra={
+            "subscription_id": subscription.id,
+            "user_id": current_user.id,
+            "source_url": str(body.source_url),
+        },
+    )
     return subscription
 
 
@@ -66,7 +80,12 @@ async def list_subscriptions(
         .where(Subscription.is_active == True)  # noqa: E712
         .order_by(Subscription.id.desc())
     )
-    return result.scalars().all()
+    subscriptions = result.scalars().all()
+    logger.debug(
+        "subscriptions listed",
+        extra={"user_id": current_user.id, "count": len(subscriptions)},
+    )
+    return subscriptions
 
 
 # ── API-07: GET /subscriptions/{id} ──────────────────────────────────────────
@@ -91,6 +110,10 @@ async def delete_subscription(
     subscription = await _get_own_subscription(subscription_id, current_user, db)
     subscription.is_active = False  # soft delete — keep data for price history
     await db.commit()
+    logger.info(
+        "subscription soft-deleted",
+        extra={"subscription_id": subscription_id, "user_id": current_user.id},
+    )
 
 
 # ── API-09: GET /subscriptions/{id}/prices ────────────────────────────────────
@@ -108,7 +131,12 @@ async def get_price_history(
         .order_by(PriceHistory.checked_at.desc())
         .limit(100)
     )
-    return result.scalars().all()
+    records = result.scalars().all()
+    logger.debug(
+        "price history fetched",
+        extra={"subscription_id": subscription_id, "records": len(records)},
+    )
+    return records
 
 
 # ── API-10: GET /subscriptions/{id}/screenshots ───────────────────────────────
@@ -140,4 +168,8 @@ async def get_screenshots(
         )
         for r in records
     ]
+    logger.debug(
+        "screenshots presigned urls generated",
+        extra={"subscription_id": subscription_id, "count": len(urls)},
+    )
     return urls
