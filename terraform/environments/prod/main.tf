@@ -89,24 +89,27 @@ module "database" {
 }
 
 # ── API: Lambda Docker + API Gateway HTTP v2 ──────────────────────────────────
-# Uncomment when TF-API-01 is implemented
 
-# module "api" {
-#   source                   = "../../modules/api"
-#   environment              = "prod"
-#   aws_region               = "eu-north-1"
-#   vpc_id                   = module.networking.vpc_id
-#   private_subnet_ids       = module.networking.private_subnet_ids
-#   lambda_security_group_id = module.networking.lambda_security_group_id
-#   db_endpoint              = module.database.db_endpoint
-#   db_name                  = module.database.db_name
-#   db_username              = var.db_username
-#   db_password              = var.db_password
-#   cognito_user_pool_id     = module.auth.user_pool_id
-#   cognito_client_id        = module.auth.user_pool_client_id
-#   screenshots_bucket_name  = module.frontend.screenshots_bucket_name
-#   screenshots_bucket_arn   = module.frontend.screenshots_bucket_arn
-# }
+module "api" {
+  source      = "../../modules/api"
+  environment = "prod"
+  aws_region  = "eu-north-1"
+
+  vpc_id                   = module.networking.vpc_id
+  private_subnet_ids       = module.networking.private_subnet_ids
+  lambda_security_group_id = module.networking.lambda_security_group_id
+
+  db_endpoint = module.database.db_endpoint
+  db_name     = module.database.db_name
+  db_username = var.db_username
+  db_password = var.db_password
+
+  cognito_user_pool_id = module.auth.user_pool_id
+  cognito_client_id    = module.auth.user_pool_client_id
+
+  screenshots_bucket_name = module.frontend.screenshots_bucket_name
+  screenshots_bucket_arn  = module.frontend.screenshots_bucket_arn
+}
 
 # ── Messaging: SQS + EventBridge cron (3x/day) ───────────────────────────────
 # Uncomment when TF-MESSAGING-01 is implemented

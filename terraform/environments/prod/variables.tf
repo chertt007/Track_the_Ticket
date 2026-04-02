@@ -36,7 +36,3 @@ variable "db_password" {
   sensitive   = true
 }
 
-# variable "ecr_image_uri" {
-#   description = "API Lambda ECR image URI — injected by CI/CD on deploy"
-#   type        = string
-# }

@@ -67,19 +67,18 @@ output "db_secrets_manager_arn" {
 }
 
 # ── API outputs ───────────────────────────────────────────────────────────────
-# Uncomment when module "api" is enabled in main.tf
 
-# output "api_endpoint" {
-#   description = "API Gateway endpoint — add as VITE_API_URL in GitHub Secrets"
-#   value       = module.api.api_endpoint
-# }
+output "api_endpoint" {
+  description = "API Gateway endpoint — add as VITE_API_URL in GitHub Secrets"
+  value       = module.api.api_endpoint
+}
 
-# output "ecr_repository_url" {
-#   description = "ECR repository URL — add as ECR_REPOSITORY_URL in GitHub Secrets"
-#   value       = module.api.ecr_repository_url
-# }
+output "ecr_repository_url" {
+  description = "ECR repository URL — used by CI/CD"
+  value       = module.api.ecr_repository_url
+}
 
-# output "lambda_function_name" {
-#   description = "Lambda function name — add as LAMBDA_FUNCTION_NAME in GitHub Secrets"
-#   value       = module.api.lambda_function_name
-# }
+output "lambda_function_name" {
+  description = "Lambda function name — add as LAMBDA_FUNCTION_NAME in GitHub Secrets"
+  value       = module.api.lambda_function_name
+}

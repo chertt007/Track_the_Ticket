@@ -1,0 +1,91 @@
+name: Deploy API
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/api/**'
+      - '.github/workflows/deploy-api.yml'
+  workflow_dispatch: # allows manual trigger from GitHub Actions UI
+
+jobs:
+  deploy:
+    name: Build → Push ECR → Update Lambda
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── AWS auth ─────────────────────────────────────────────────────────────
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # ── ECR login ─────────────────────────────────────────────────────────────
+      # Generates a temporary docker login token valid for 12 hours.
+      # This is the standard AWS-recommended way to authenticate Docker with ECR.
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # ── Docker build & push ───────────────────────────────────────────────────
+      # Tags the image with both the git SHA and "latest".
+      # SHA tag: immutable reference for rollbacks (e.g. deploy SHA abc1234 again)
+      # latest tag: Lambda always pulls "latest" on next cold start
+
+      - name: Build and push Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_NAME }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build \
+            --platform linux/amd64 \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            services/api/
+
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+        id: build
+
+      # ── Lambda update ─────────────────────────────────────────────────────────
+      # Points Lambda at the new image digest.
+      # Lambda doesn't auto-pull "latest" — we must call update-function-code
+      # explicitly with the new image URI after every push.
+
+      - name: Update Lambda function code
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_NAME }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          aws lambda update-function-code \
+            --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
+            --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      # ── Wait for update to complete ───────────────────────────────────────────
+      # Lambda update is async — the function stays in "Updating" state for
+      # a few seconds. This step waits until it's fully active before finishing.
+
+      - name: Wait for Lambda update
+        run: |
+          aws lambda wait function-updated \
+            --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }}
+
+      - name: Deploy summary
+        run: |
+          echo "### ✅ API Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image:** \`${{ steps.build.outputs.image }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Lambda:** \`${{ secrets.LAMBDA_FUNCTION_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
