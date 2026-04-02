@@ -66,19 +66,20 @@ output "db_secrets_manager_arn" {
   value       = module.database.secrets_manager_arn
 }
 
-# ── Outputs added as modules are implemented ──────────────────────────────────
+# ── API outputs ───────────────────────────────────────────────────────────────
+# Uncomment when module "api" is enabled in main.tf
 
 # output "api_endpoint" {
-#   description = "API Gateway endpoint — add as VITE_API_URL in frontend build"
+#   description = "API Gateway endpoint — add as VITE_API_URL in GitHub Secrets"
 #   value       = module.api.api_endpoint
 # }
 
-# output "cognito_user_pool_id" {
-#   description = "Cognito User Pool ID — add as VITE_COGNITO_USER_POOL_ID"
-#   value       = module.auth.user_pool_id
+# output "ecr_repository_url" {
+#   description = "ECR repository URL — add as ECR_REPOSITORY_URL in GitHub Secrets"
+#   value       = module.api.ecr_repository_url
 # }
 
-# output "cognito_client_id" {
-#   description = "Cognito App Client ID — add as VITE_COGNITO_CLIENT_ID"
-#   value       = module.auth.user_pool_client_id
+# output "lambda_function_name" {
+#   description = "Lambda function name — add as LAMBDA_FUNCTION_NAME in GitHub Secrets"
+#   value       = module.api.lambda_function_name
 # }

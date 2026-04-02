@@ -32,9 +32,9 @@ output "lambda_role_arn" {
   value       = aws_iam_role.lambda.arn
 }
 
-# ── API Gateway — populated in TF-API-03 ──────────────────────────────────────
+# ── API Gateway ───────────────────────────────────────────────────────────────
 
-# output "api_endpoint" {
-#   description = "API Gateway HTTP endpoint URL"
-#   value       = aws_apigatewayv2_api.api.api_endpoint
-# }
+output "api_endpoint" {
+  description = "API Gateway HTTP endpoint URL — set as VITE_API_URL in the frontend"
+  value       = aws_apigatewayv2_stage.default.invoke_url
+}

@@ -189,3 +189,93 @@ resource "aws_lambda_function" "api" {
     Name = "tracktheticket-api"
   }
 }
+
+# ── TF-API-03: API Gateway HTTP v2 ────────────────────────────────────────────
+
+resource "aws_apigatewayv2_api" "api" {
+  name          = "tracktheticket-api"
+  protocol_type = "HTTP" # HTTP API v2 — cheaper and faster than REST API v1
+
+  # CORS is configured here at the Gateway level, not in FastAPI.
+  # This handles preflight OPTIONS requests before they even reach Lambda.
+  cors_configuration {
+    allow_origins = ["*"]  # tighten to CloudFront URL in production hardening
+    allow_methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allow_headers = ["Content-Type", "Authorization", "X-Request-ID"]
+    max_age       = 300 # browsers cache preflight response for 5 minutes
+  }
+}
+
+resource "aws_apigatewayv2_integration" "lambda" {
+  api_id = aws_apigatewayv2_api.api.id
+
+  # AWS_PROXY means API Gateway passes the entire request to Lambda as-is
+  # and returns Lambda's response directly — Mangum handles the translation
+  # between API Gateway event format and ASGI (FastAPI).
+  integration_type   = "AWS_PROXY"
+  integration_uri    = aws_lambda_function.api.invoke_arn
+  integration_method = "POST" # API Gateway always uses POST to invoke Lambda internally
+
+  # Payload format 2.0 is required for HTTP API v2 — simpler event structure
+  # than the legacy 1.0 format used by REST API.
+  payload_format_version = "2.0"
+}
+
+resource "aws_apigatewayv2_route" "proxy" {
+  api_id = aws_apigatewayv2_api.api.id
+
+  # Catch-all route: ANY /{proxy+} forwards every path and method to Lambda.
+  # FastAPI's router handles the actual routing internally via Mangum.
+  route_key = "ANY /{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
+resource "aws_apigatewayv2_route" "root" {
+  api_id = aws_apigatewayv2_api.api.id
+
+  # Root route for GET / and /health — without this the root path returns 404.
+  route_key = "ANY /"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
+resource "aws_apigatewayv2_stage" "default" {
+  api_id      = aws_apigatewayv2_api.api.id
+  name        = "$default" # $default stage is auto-deployed — no manual deploy step needed
+  auto_deploy = true
+
+  # Access logging: every request to API Gateway is logged to CloudWatch.
+  # Separate from Lambda logs — useful to catch requests that never reached Lambda
+  # (e.g., auth failures at gateway level, malformed requests).
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.api_gateway.arn
+    format = jsonencode({
+      requestId        = "$context.requestId"
+      sourceIp         = "$context.identity.sourceIp"
+      requestTime      = "$context.requestTime"
+      httpMethod       = "$context.httpMethod"
+      routeKey         = "$context.routeKey"
+      status           = "$context.status"
+      responseLength   = "$context.responseLength"
+      integrationError = "$context.integrationErrorMessage"
+    })
+  }
+}
+
+resource "aws_cloudwatch_log_group" "api_gateway" {
+  # Log group for API Gateway access logs.
+  # 14-day retention — enough for debugging without accumulating costs.
+  name              = "/aws/apigateway/tracktheticket-api"
+  retention_in_days = 14
+}
+
+resource "aws_lambda_permission" "api_gateway" {
+  # Grants API Gateway permission to invoke our Lambda function.
+  # Without this, API Gateway will get a 403 when trying to call Lambda.
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.api.function_name
+  principal     = "apigateway.amazonaws.com"
+
+  # Restricts permission to only this specific API Gateway — not any gateway in the account.
+  source_arn = "${aws_apigatewayv2_api.api.execution_arn}/*/*"
+}
