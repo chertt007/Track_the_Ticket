@@ -22,6 +22,11 @@ class Subscription(Base):
     baggage_info: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_url: Mapped[str] = mapped_column(Text, nullable=False)
 
+    # pending → agent is processing the URL
+    # active  → flight found, strategy ready, price checks running
+    # failed  → link-parser or strategy-agent could not process the URL
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="pending")
+
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     check_frequency: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
     last_checked_at: Mapped[datetime | None] = mapped_column(nullable=True)

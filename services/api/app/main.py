@@ -6,6 +6,7 @@ from sqlalchemy import text
 
 from app.config import settings
 from app.database import engine
+from app.routers import subscriptions
 
 
 @asynccontextmanager
@@ -28,6 +29,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+app.include_router(subscriptions.router)
 
 
 @app.get("/health")
