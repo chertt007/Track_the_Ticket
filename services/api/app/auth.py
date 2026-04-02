@@ -119,7 +119,10 @@ async def _decode_token(token: str) -> dict:
             token,
             pem_key,
             algorithms=["RS256"],
-            options={"verify_aud": False},
+            options={
+                "verify_aud": False,
+                "verify_at_hash": False,  # ID token contains at_hash; we don't pass access_token, so skip this check
+            },
         )
     except JWTError as exc:
         logger.warning(
