@@ -4,11 +4,6 @@ variable "environment" {
   default     = "prod"
 }
 
-variable "ecr_image_uri" {
-  description = "ECR image URI for the API Lambda (injected by CI/CD)"
-  type        = string
-}
-
 variable "vpc_id" {
   description = "VPC ID for Lambda VPC config"
   type        = string
@@ -56,7 +51,18 @@ variable "cognito_client_id" {
   type        = string
 }
 
+variable "screenshots_bucket_name" {
+  description = "Screenshots S3 bucket name — used in Lambda env vars"
+  type        = string
+}
+
 variable "screenshots_bucket_arn" {
   description = "Screenshots S3 bucket ARN — added to Lambda IAM policy"
   type        = string
+}
+
+variable "aws_region" {
+  description = "AWS region for Lambda environment variables"
+  type        = string
+  default     = "eu-north-1"
 }
