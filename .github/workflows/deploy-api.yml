@@ -44,7 +44,7 @@ jobs:
       - name: Build and push Docker image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_NAME }}
+          ECR_REPOSITORY: tracktheticket-api
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build \
@@ -67,11 +67,11 @@ jobs:
       - name: Update Lambda function code
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_NAME }}
+          ECR_REPOSITORY: tracktheticket-api
           IMAGE_TAG: ${{ github.sha }}
         run: |
           aws lambda update-function-code \
-            --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
+            --function-name tracktheticket-api \
             --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
       # ── Wait for update to complete ───────────────────────────────────────────
@@ -81,11 +81,11 @@ jobs:
       - name: Wait for Lambda update
         run: |
           aws lambda wait function-updated \
-            --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }}
+            --function-name tracktheticket-api
 
       - name: Deploy summary
         run: |
           echo "### ✅ API Deployed" >> $GITHUB_STEP_SUMMARY
           echo "- **Image:** \`${{ steps.build.outputs.image }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Lambda:** \`${{ secrets.LAMBDA_FUNCTION_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Lambda:** tracktheticket-api" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
