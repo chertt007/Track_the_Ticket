@@ -170,7 +170,6 @@ resource "aws_lambda_function" "api" {
       DB_NAME              = var.db_name
       DB_USERNAME          = var.db_username
       DB_PASSWORD          = var.db_password
-      AWS_REGION           = var.aws_region
       SCREENSHOTS_BUCKET   = var.screenshots_bucket_name
       COGNITO_USER_POOL_ID = var.cognito_user_pool_id
       COGNITO_REGION       = var.aws_region

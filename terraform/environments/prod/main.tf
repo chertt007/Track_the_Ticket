@@ -105,7 +105,7 @@ module "api" {
   db_password = var.db_password
 
   cognito_user_pool_id = module.auth.user_pool_id
-  cognito_client_id    = module.auth.user_pool_client_id
+  cognito_client_id    = module.auth.client_id
 
   screenshots_bucket_name = module.frontend.screenshots_bucket_name
   screenshots_bucket_arn  = module.frontend.screenshots_bucket_arn
