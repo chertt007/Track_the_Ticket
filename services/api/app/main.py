@@ -25,7 +25,7 @@ async def lifespan(app: FastAPI):
         "🚀 application starting",
         extra={"environment": settings.environment},
     )
-    setup_tracing(app, environment=settings.environment)
+    setup_tracing(environment=settings.environment)
     await engine.connect()
     yield
     logger.info("🛑 application shutting down")

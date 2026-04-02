@@ -1,70 +1,78 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit'
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
 import type { Subscription } from '../../types'
+import { apiClient } from '../../api'
 
-// Mock data — will be replaced by real API calls in FE-07
-const mockSubscriptions: Subscription[] = [
-  {
-    id: 'sub-001',
-    flightNumber: 'SU 1234',
-    airline: 'Aeroflot',
-    originIata: 'SVO',
-    destinationIata: 'DXB',
-    departureDate: '2026-05-15',
-    departureTime: '08:30',
-    baggageInfo: '1 × 23 kg',
-    sourceUrl: 'https://www.aviasales.ru/search/SVO1505DXB1',
-    isActive: true,
-    checkFrequency: 3,
-    lastCheckedAt: '2026-03-31T10:00:00Z',
-    mockScreenshotUrl: 'https://placehold.co/320x180/9B1B5A/white?text=₽+42,500',
-    lastPrice: 42500,
-    currency: 'RUB',
+// ── API response type (snake_case from FastAPI) ───────────────────────────────
+
+interface SubscriptionApiResponse {
+  id: number
+  source_url: string
+  status: string
+  origin_iata: string | null
+  destination_iata: string | null
+  departure_date: string | null
+  departure_time: string | null
+  flight_number: string | null
+  airline: string | null
+  baggage_info: string | null
+  is_active: boolean
+  check_frequency: number
+  last_checked_at: string | null
+  last_notified_at: string | null
+}
+
+// ── Mapping: API snake_case → frontend camelCase ──────────────────────────────
+
+function mapSubscription(raw: SubscriptionApiResponse): Subscription {
+  return {
+    id:              String(raw.id),
+    flightNumber:    raw.flight_number  ?? '—',
+    airline:         raw.airline        ?? '—',
+    originIata:      raw.origin_iata    ?? '???',
+    destinationIata: raw.destination_iata ?? '???',
+    departureDate:   raw.departure_date ?? '—',
+    departureTime:   raw.departure_time?.slice(0, 5) ?? '—', // "08:30:00" → "08:30"
+    baggageInfo:     raw.baggage_info   ?? '—',
+    sourceUrl:       raw.source_url,
+    isActive:        raw.is_active,
+    checkFrequency:  raw.check_frequency,
+    lastCheckedAt:   raw.last_checked_at,
+    lastPrice:       null, // fetched separately via GET /subscriptions/{id}/prices
+    currency:        'RUB',
+  }
+}
+
+// ── Async thunk ───────────────────────────────────────────────────────────────
+
+export const fetchSubscriptions = createAsyncThunk<Subscription[]>(
+  'subscriptions/fetchAll',
+  async () => {
+    const response = await apiClient.get<SubscriptionApiResponse[]>('/subscriptions')
+    return response.data.map(mapSubscription)
   },
-  {
-    id: 'sub-002',
-    flightNumber: 'TK 789',
-    airline: 'Turkish Airlines',
-    originIata: 'LED',
-    destinationIata: 'IST',
-    departureDate: '2026-04-02',
-    departureTime: '14:15',
-    baggageInfo: '1 × 20 kg',
-    sourceUrl: 'https://www.aviasales.ru/search/LED0204IST1',
-    isActive: true,
-    checkFrequency: 3,
-    lastCheckedAt: '2026-03-31T09:30:00Z',
-    mockScreenshotUrl: 'https://placehold.co/320x180/D63384/white?text=₽+28,900',
-    lastPrice: 28900,
-    currency: 'RUB',
+)
+
+export const deleteSubscriptionApi = createAsyncThunk<string, string>(
+  'subscriptions/deleteApi',
+  async (id: string) => {
+    await apiClient.delete(`/subscriptions/${id}`)
+    return id
   },
-  {
-    id: 'sub-003',
-    flightNumber: 'VY 456',
-    airline: 'Vueling',
-    originIata: 'SVO',
-    destinationIata: 'BCN',
-    departureDate: '2026-05-10',
-    departureTime: '11:45',
-    baggageInfo: 'Hand luggage only',
-    sourceUrl: 'https://www.aviasales.ru/search/SVO1005BCN1',
-    isActive: false,
-    checkFrequency: 6,
-    lastCheckedAt: null,
-    mockScreenshotUrl: 'https://placehold.co/320x180/5C0A34/white?text=₽+61,200',
-    lastPrice: 61200,
-    currency: 'RUB',
-  },
-]
+)
+
+// ── Slice ─────────────────────────────────────────────────────────────────────
 
 interface SubscriptionsState {
   items: Subscription[]
   loading: boolean
-  checkingId: string | null  // id of the subscription currently being checked
+  error: string | null
+  checkingId: string | null
 }
 
 const initialState: SubscriptionsState = {
-  items: mockSubscriptions,
-  loading: false,
+  items:      [],
+  loading:    false,
+  error:      null,
   checkingId: null,
 }
 
@@ -72,23 +80,23 @@ const subscriptionsSlice = createSlice({
   name: 'subscriptions',
   initialState,
   reducers: {
+    // Optimistic add — real subscription comes back on next fetchSubscriptions
     addSubscription: (state, action: PayloadAction<{ url: string }>) => {
       const newSub: Subscription = {
-        id: `sub-${Date.now()}`,
-        flightNumber: '—',
-        airline: '—',
-        originIata: '???',
+        id:              `pending-${Date.now()}`,
+        flightNumber:    '—',
+        airline:         '—',
+        originIata:      '???',
         destinationIata: '???',
-        departureDate: '—',
-        departureTime: '—',
-        baggageInfo: '—',
-        sourceUrl: action.payload.url,
-        isActive: true,
-        checkFrequency: 3,
-        lastCheckedAt: null,
-        mockScreenshotUrl: 'https://placehold.co/320x180/FF85A1/white?text=Pending...',
-        lastPrice: null,
-        currency: 'RUB',
+        departureDate:   '—',
+        departureTime:   '—',
+        baggageInfo:     '—',
+        sourceUrl:       action.payload.url,
+        isActive:        true,
+        checkFrequency:  3,
+        lastCheckedAt:   null,
+        lastPrice:       null,
+        currency:        'RUB',
       }
       state.items.unshift(newSub)
     },
@@ -105,6 +113,25 @@ const subscriptionsSlice = createSlice({
     removeSubscription: (state, action: PayloadAction<string>) => {
       state.items = state.items.filter(s => s.id !== action.payload)
     },
+  },
+
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchSubscriptions.pending, (state) => {
+        state.loading = true
+        state.error   = null
+      })
+      .addCase(fetchSubscriptions.fulfilled, (state, action) => {
+        state.loading = false
+        state.items   = action.payload
+      })
+      .addCase(fetchSubscriptions.rejected, (state, action) => {
+        state.loading = false
+        state.error   = action.error.message ?? 'Failed to load subscriptions'
+      })
+      .addCase(deleteSubscriptionApi.fulfilled, (state, action) => {
+        state.items = state.items.filter(s => s.id !== action.payload)
+      })
   },
 })
 

@@ -1,13 +1,15 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
+import CircularProgress from '@mui/material/CircularProgress'
 import SearchOffIcon from '@mui/icons-material/SearchOff'
 import AddIcon from '@mui/icons-material/Add'
-import { useAppSelector } from '../hooks'
+import { useAppSelector, useAppDispatch } from '../hooks'
 import { useT } from '../hooks/useT'
 import { useLocale } from '../hooks/useLocale'
+import { fetchSubscriptions } from '../store/slices/subscriptionsSlice'
 import SubscriptionCard from '../components/SubscriptionCard'
 import AddSubscriptionModal from '../components/AddSubscriptionModal'
 import { dashboardStyles as s } from './DashboardPage.styles'
@@ -25,8 +27,15 @@ function ruPlural(n: number, one: string, few: string, many: string): string {
 export default function DashboardPage() {
   const t = useT()
   const locale = useLocale()
+  const dispatch = useAppDispatch()
   const subscriptions = useAppSelector(st => st.subscriptions.items)
+  const loading = useAppSelector(st => st.subscriptions.loading)
   const [modalOpen, setModalOpen] = useState(false)
+
+  // Fetch real subscriptions from API on mount
+  useEffect(() => {
+    dispatch(fetchSubscriptions())
+  }, [dispatch])
 
   const subscriptionCount = locale === 'ru-RU'
     ? ruPlural(subscriptions.length, t('subscriptionOne'), t('subscriptionFew'), t('subscriptionMany'))
@@ -51,7 +60,11 @@ export default function DashboardPage() {
       </Box>
 
       {/* Subscription list */}
-      {subscriptions.length === 0 ? (
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
+          <CircularProgress />
+        </Box>
+      ) : subscriptions.length === 0 ? (
         <Box sx={s.emptyState}>
           <SearchOffIcon sx={s.emptyIcon} />
           <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -71,6 +84,7 @@ export default function DashboardPage() {
           ))}
         </Stack>
       )}
+
 
       {/* Add subscription modal */}
       <AddSubscriptionModal open={modalOpen} onClose={() => setModalOpen(false)} />
