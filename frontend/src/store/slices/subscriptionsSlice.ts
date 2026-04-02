@@ -1,3 +1,4 @@
+// subscriptionsSlice — real API, no mock data
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
 import type { Subscription } from '../../types'
 import { apiClient } from '../../api'

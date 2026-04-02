@@ -30,6 +30,7 @@ export default function DashboardPage() {
   const dispatch = useAppDispatch()
   const subscriptions = useAppSelector(st => st.subscriptions.items)
   const loading = useAppSelector(st => st.subscriptions.loading)
+  const error = useAppSelector(st => st.subscriptions.error)
   const [modalOpen, setModalOpen] = useState(false)
 
   // Fetch real subscriptions from API on mount
@@ -59,9 +60,18 @@ export default function DashboardPage() {
         </Button>
       </Box>
 
+      {/* API error banner — shown when GET /subscriptions fails */}
+      {error && (
+        <Box sx={s.errorBanner}>
+          <Typography variant="body2" sx={s.errorText}>
+            API error: {error}
+          </Typography>
+        </Box>
+      )}
+
       {/* Subscription list */}
       {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
+        <Box sx={s.loadingBox}>
           <CircularProgress />
         </Box>
       ) : subscriptions.length === 0 ? (
@@ -84,7 +94,6 @@ export default function DashboardPage() {
           ))}
         </Stack>
       )}
-
 
       {/* Add subscription modal */}
       <AddSubscriptionModal open={modalOpen} onClose={() => setModalOpen(false)} />

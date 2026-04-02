@@ -149,12 +149,10 @@ resource "aws_lambda_function" "api" {
   memory_size = 512
   timeout     = 30
 
-  # Lambda runs inside the private subnet so it can reach RDS via private IP.
-  # The security group controls which ports Lambda can connect to.
-  vpc_config {
-    subnet_ids         = var.private_subnet_ids
-    security_group_ids = [var.lambda_security_group_id]
-  }
+  # NOTE: Lambda is intentionally NOT placed in the VPC.
+  # Without VPC, Lambda has direct internet access (needed to fetch Cognito JWKS).
+  # RDS is publicly_accessible = true, so Lambda reaches it via the public endpoint.
+  # This avoids the need for an expensive NAT Gateway (dev environment trade-off).
 
   # Active tracing sends every request to X-Ray automatically.
   # Works together with aws-xray-sdk in the FastAPI app (API-14).

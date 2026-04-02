@@ -93,11 +93,7 @@ module "database" {
 module "api" {
   source      = "../../modules/api"
   environment = "prod"
-  aws_region  = "eu-north-1"
-
-  vpc_id                   = module.networking.vpc_id
-  private_subnet_ids       = module.networking.private_subnet_ids
-  lambda_security_group_id = module.networking.lambda_security_group_id
+  aws_region  = "us-east-1"
 
   db_endpoint = module.database.db_endpoint
   db_name     = module.database.db_name

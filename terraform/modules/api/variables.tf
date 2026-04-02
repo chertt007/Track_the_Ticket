@@ -4,21 +4,6 @@ variable "environment" {
   default     = "prod"
 }
 
-variable "vpc_id" {
-  description = "VPC ID for Lambda VPC config"
-  type        = string
-}
-
-variable "private_subnet_ids" {
-  description = "Private subnet IDs for Lambda VPC config"
-  type        = list(string)
-}
-
-variable "lambda_security_group_id" {
-  description = "Security group ID for Lambda"
-  type        = string
-}
-
 variable "db_endpoint" {
   description = "RDS endpoint for DATABASE_URL env var"
   type        = string
@@ -64,5 +49,5 @@ variable "screenshots_bucket_arn" {
 variable "aws_region" {
   description = "AWS region for Lambda environment variables"
   type        = string
-  default     = "eu-north-1"
+  default     = "us-east-1"
 }

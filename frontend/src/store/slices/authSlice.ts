@@ -42,12 +42,14 @@ const authSlice = createSlice({
       state.loading = action.payload
     },
 
-    // Dev-only: bypass Cognito for local UI testing
+    // Dev-only: bypass Cognito for local UI testing.
+    // Token is a structurally valid JWT (header.payload.sig) so the API can parse
+    // it and return a proper 401 instead of crashing on malformed input.
     mockLogin: (state) => {
       state.isAuthenticated = true
       state.loading = false
       state.user = { sub: 'dev-user-001', email: 'dev@tracktheticket.local' }
-      state.token = 'mock-jwt-token'
+      state.token = 'eyJhbGciOiJSUzI1NiIsImtpZCI6Im1vY2sta2lkLTAwMSIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkZXYtdXNlci0wMDEiLCJlbWFpbCI6ImRldkB0cmFja3RoZXRpY2tldC5sb2NhbCIsImV4cCI6OTk5OTk5OTk5OX0.mock-signature'
     },
   },
 })

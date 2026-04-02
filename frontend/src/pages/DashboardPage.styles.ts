@@ -41,4 +41,21 @@ export const dashboardStyles = {
   emptyHint: {
     mb: 3,
   } as SxProps<Theme>,
+
+  loadingBox: {
+    display: 'flex',
+    justifyContent: 'center',
+    mt: 8,
+  } as SxProps<Theme>,
+
+  errorBanner: {
+    mb: 2,
+    p: 2,
+    bgcolor: 'error.light',
+    borderRadius: 2,
+  } as SxProps<Theme>,
+
+  errorText: {
+    color: 'error.contrastText',
+  } as SxProps<Theme>,
 }

@@ -30,9 +30,15 @@ async def _get_jwks() -> dict:
 
 
 async def _decode_token(token: str) -> dict:
-    jwks = await _get_jwks()
+    try:
+        unverified_header = jwt.get_unverified_header(token)
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token is malformed",
+        )
 
-    unverified_header = jwt.get_unverified_header(token)
+    jwks = await _get_jwks()
     kid = unverified_header.get("kid")
 
     public_key = None

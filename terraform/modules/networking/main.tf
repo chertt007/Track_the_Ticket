@@ -180,7 +180,8 @@ resource "aws_security_group" "lambda" {
 }
 
 # ── Security Group: RDS ───────────────────────────────────────────────────────
-# Only allows PostgreSQL connections from Lambda — nothing else.
+# Allows PostgreSQL from Lambda SG (in-VPC) and from internet (Lambda without VPC).
+# RDS is publicly_accessible = true, so password is the real protection here.
 
 resource "aws_security_group" "rds" {
   name        = "tracktheticket-${var.environment}-rds-sg"
@@ -188,11 +189,19 @@ resource "aws_security_group" "rds" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    description     = "PostgreSQL from Lambda"
+    description     = "PostgreSQL from Lambda (in-VPC)"
     from_port       = 5432
     to_port         = 5432
     protocol        = "tcp"
     security_groups = [aws_security_group.lambda.id]
+  }
+
+  ingress {
+    description = "PostgreSQL from Lambda without VPC and local dev tools"
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   tags = {
