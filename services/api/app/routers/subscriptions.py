@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
@@ -28,3 +29,17 @@ async def create_subscription(
     await db.commit()
     await db.refresh(subscription)
     return subscription
+
+
+@router.get("", response_model=list[SubscriptionOut])
+async def list_subscriptions(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[Subscription]:
+    result = await db.execute(
+        select(Subscription)
+        .where(Subscription.user_id == current_user.id)
+        .where(Subscription.is_active == True)  # noqa: E712
+        .order_by(Subscription.id.desc())
+    )
+    return result.scalars().all()
