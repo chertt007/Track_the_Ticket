@@ -9,6 +9,7 @@ from app.database import engine
 from app.logging_config import setup_logging, get_logger
 from app.middleware import RequestLoggingMiddleware
 from app.routers import subscriptions
+from app.tracing import setup_tracing
 
 logger = get_logger(__name__)
 
@@ -24,6 +25,7 @@ async def lifespan(app: FastAPI):
         "🚀 application starting",
         extra={"environment": settings.environment},
     )
+    setup_tracing(app, environment=settings.environment)
     await engine.connect()
     yield
     logger.info("🛑 application shutting down")
