@@ -77,6 +77,18 @@ src/components/
 
 ---
 
+## Core Pipeline (order matters)
+
+1. **link-parser** — user pastes URL → Playwright intercepts tickets-api → returns structured
+   flight data `{ origin_iata, destination_iata, departure_date, flight_number, price, ... }`
+2. **strategy-agent** — receives parsed flight data → builds `strategy_json` (how to monitor prices)
+3. **First price check** — strategy is executed once to verify it works
+4. **Subscription created** — ONLY after a successful first price check. No subscription row is
+   written to the DB before this point. Parsing alone does NOT create a subscription.
+5. **Periodic price-checker** — runs on schedule, uses strategy to check prices → Telegram notification on change.
+
+---
+
 ## DB Schema
 - `users`: id, cognito_id, email, telegram_id
 - `search_strategies`: id, airline_name, airline_domain, strategy_json (JSONB), success_rate
