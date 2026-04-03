@@ -41,6 +41,79 @@ EXTRA_WAIT_SECONDS = 4
 
 VIEWPORT = {"width": 390, "height": 844}
 
+# ── IATA airline code → full name ─────────────────────────────────────────────
+# Covers carriers most common on Aviasales (RU market + major international)
+AIRLINE_NAMES: dict[str, str] = {
+    "SU": "Aeroflot",
+    "S7": "S7 Airlines",
+    "U6": "Ural Airlines",
+    "DP": "Pobeda",
+    "FV": "Rossiya Airlines",
+    "N4": "Nordwind Airlines",
+    "5N": "Nordavia",
+    "R3": "Yakutia Airlines",
+    "YC": "Yamal Airlines",
+    "6R": "Alrosa Airlines",
+    "TK": "Turkish Airlines",
+    "PC": "Pegasus Airlines",
+    "LH": "Lufthansa",
+    "BA": "British Airways",
+    "EK": "Emirates",
+    "QR": "Qatar Airways",
+    "SQ": "Singapore Airlines",
+    "AF": "Air France",
+    "KL": "KLM",
+    "OS": "Austrian Airlines",
+    "AY": "Finnair",
+    "LO": "LOT Polish Airlines",
+    "OK": "Czech Airlines",
+    "W6": "Wizz Air",
+    "FR": "Ryanair",
+    "U2": "easyJet",
+    "VY": "Vueling",
+    "IB": "Iberia",
+    "AZ": "ITA Airways",
+    "SK": "SAS",
+    "LX": "Swiss",
+    "OU": "Croatia Airlines",
+    "JP": "Adria Airways",
+    "PS": "Ukraine International Airlines",
+    "HY": "Uzbekistan Airways",
+    "KC": "Air Astana",
+    "B2": "Belavia",
+    "EY": "Etihad Airways",
+    "GF": "Gulf Air",
+    "WY": "Oman Air",
+    "J2": "Azerbaijan Airlines",
+    "MH": "Malaysia Airlines",
+    "TG": "Thai Airways",
+    "CX": "Cathay Pacific",
+    "JL": "Japan Airlines",
+    "NH": "ANA",
+    "KE": "Korean Air",
+    "OZ": "Asiana Airlines",
+    "CA": "Air China",
+    "MU": "China Eastern",
+    "CZ": "China Southern",
+    "AI": "Air India",
+    "ET": "Ethiopian Airlines",
+    "MS": "EgyptAir",
+    "AT": "Royal Air Maroc",
+    "AC": "Air Canada",
+    "AA": "American Airlines",
+    "UA": "United Airlines",
+    "DL": "Delta Air Lines",
+    "WN": "Southwest Airlines",
+    "B6": "JetBlue",
+    "AS": "Alaska Airlines",
+    "LA": "LATAM Airlines",
+    "AV": "Avianca",
+    "CM": "Copa Airlines",
+    "AM": "Aeromexico",
+    "QF": "Qantas",
+    "NZ": "Air New Zealand",
+}
+
 USER_AGENT = (
     "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
     "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
@@ -133,16 +206,19 @@ def _decode_url_data(source_url: str, final_url: str) -> dict:
         if t_m:
             carrier, dep_ts, arr_ts, t_origin, t_dest = t_m.groups()
             dep_date, dep_time = _ts_to_date_time(int(dep_ts))
+            airline_name = AIRLINE_NAMES.get(carrier)
             logger.info(
-                f"[PARSER][URL] t-param decoded: carrier={carrier} "
+                f"[PARSER][URL] t-param decoded: carrier={carrier} ({airline_name or '?'}) "
                 f"dep={dep_date} {dep_time} UTC  {t_origin}→{t_dest}"
             )
+            # t-param gives real airport codes (e.g. SVO), not metro codes (MOW)
             result.update({
                 'airline_iata': carrier,
+                'airline': airline_name,
                 'departure_date': dep_date,
                 'departure_time': dep_time,
-                'origin_iata': t_origin,
-                'destination_iata': t_dest,
+                'origin_iata': t_origin,       # real airport, overrides path value
+                'destination_iata': t_dest,    # real airport, overrides path value
             })
             # Last segment of t often contains RUB price: ..._{hash}_{price}
             t_parts = t_raw.split('_')
@@ -172,7 +248,7 @@ def _decode_url_data(source_url: str, final_url: str) -> dict:
     # ── Check completeness ────────────────────────────────────────────────────
     filled = {k: v for k, v in result.items() if v is not None and v is not False}
     missing = [k for k in ('origin_iata', 'destination_iata', 'departure_date',
-                            'airline_iata', 'departure_time', 'price')
+                            'airline_iata', 'airline', 'departure_time', 'price')
                if not result.get(k)]
     logger.info(f"[PARSER][URL] decoded fields: {list(filled.keys())}")
     if missing:
