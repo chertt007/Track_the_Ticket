@@ -1,9 +1,15 @@
 """
-Ticket parser — headless Chromium via Playwright.
+Ticket parser — URL decode (primary) + Playwright fallback.
 
-Opens an Aviasales URL, intercepts the internal tickets-api.aviasales.com
-response, extracts the highlighted (or first) proposal, and returns
-structured flight data.
+Primary path (no browser):
+  1. Follow the avs.io short-link redirect via httpx.
+  2. Decode all flight data directly from the resulting Aviasales search URL.
+  3. Return immediately if all essential fields are present.
+
+Playwright fallback (headless Chromium):
+  Used only when the URL does not carry enough data (e.g. no `t` param).
+  Opens the page, intercepts the internal tickets-api.aviasales.com response,
+  extracts the highlighted (or first) proposal, and returns structured flight data.
 
 Usage context
 ─────────────
@@ -11,7 +17,7 @@ Usage context
   • Production:  this module is NOT used; the separate link-parser Lambda
                  (services/link-parser/) handles parsing via SQS.
 
-Playwright must be installed:
+Playwright must be installed (only needed for the fallback path):
     pip install playwright
     playwright install chromium
 """
@@ -33,7 +39,7 @@ logger = get_logger(__name__)
 
 TICKETS_API_HOST = "tickets-api.aviasales.com"
 
-# Seconds to wait for the tickets-api response before giving up
+# Seconds to wait for the tickets-api response before giving up (fallback only)
 PARSE_TIMEOUT_SECONDS = 50
 
 # After receiving the first proposals batch, wait this long for more to arrive
@@ -119,6 +125,10 @@ USER_AGENT = (
     "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
 )
 
+# Fields that must all be present for a URL-decode result to be considered complete
+_ESSENTIAL_FIELDS = ("origin_iata", "destination_iata", "departure_date",
+                     "airline_iata", "airline", "departure_time", "price")
+
 
 # ── Result dataclass (plain dict — avoids circular imports with Pydantic) ─────
 
@@ -166,6 +176,39 @@ def _parse_baggage(terms: dict[str, Any]) -> str:
         return f"{raw}pc"
     return str(raw)
 
+
+# ── httpx-based redirect follower (primary path — no browser) ─────────────────
+
+def _resolve_redirect(url: str) -> str:
+    """
+    Follow HTTP redirects and return the final URL.
+
+    Uses httpx with a mobile User-Agent so Aviasales short-links
+    (avs.io/xxxx) resolve to the full search URL including all flight params.
+    Falls back to the original URL on any network error.
+    """
+    try:
+        import httpx
+    except ImportError:
+        logger.warning("[PARSER] httpx not installed — skipping redirect resolve")
+        return url
+
+    try:
+        with httpx.Client(
+            follow_redirects=True,
+            timeout=10.0,
+            headers={"User-Agent": USER_AGENT},
+        ) as client:
+            resp = client.get(url)
+            final = str(resp.url)
+            logger.info(f"[PARSER][httpx] {url} → {final[:200]}")
+            return final
+    except Exception as exc:
+        logger.warning(f"[PARSER][httpx] redirect resolve failed ({exc!s}) — using original URL")
+        return url
+
+
+# ── URL-based flight data decoder ─────────────────────────────────────────────
 
 def _decode_url_data(source_url: str, final_url: str) -> dict:
     """
@@ -247,9 +290,7 @@ def _decode_url_data(source_url: str, final_url: str) -> dict:
 
     # ── Check completeness ────────────────────────────────────────────────────
     filled = {k: v for k, v in result.items() if v is not None and v is not False}
-    missing = [k for k in ('origin_iata', 'destination_iata', 'departure_date',
-                            'airline_iata', 'airline', 'departure_time', 'price')
-               if not result.get(k)]
+    missing = [k for k in _ESSENTIAL_FIELDS if not result.get(k)]
     logger.info(f"[PARSER][URL] decoded fields: {list(filled.keys())}")
     if missing:
         logger.warning(f"[PARSER][URL] still missing: {missing} — will try tickets-api")
@@ -258,6 +299,8 @@ def _decode_url_data(source_url: str, final_url: str) -> dict:
 
     return result
 
+
+# ── Helpers shared by both paths ──────────────────────────────────────────────
 
 def _extract_highlighted_sign(url: str) -> Optional[str]:
     """
@@ -342,35 +385,24 @@ def _build_result(url: str, proposal: dict, airlines: dict[str, str]) -> dict:
     return result
 
 
-# ── Playwright entry point ────────────────────────────────────────────────────
+# ── Playwright fallback ───────────────────────────────────────────────────────
 
-def parse_ticket(url: str) -> dict:
+def _parse_with_playwright(source_url: str, t0: float) -> dict:
     """
-    Open *url* in a headless browser, intercept the Aviasales tickets-api
-    response, and return a structured dict with flight data.
+    Fallback parser: open the URL in headless Chromium, intercept
+    the tickets-api.aviasales.com response, return structured flight data.
 
-    Runs synchronously — call via asyncio.to_thread() from an async context
-    so the uvicorn event loop is not blocked.
-
-    Raises
-    ------
-    RuntimeError   if Playwright is not installed.
-    TimeoutError   if the tickets-api does not respond in time.
+    Only called when URL decode does not yield all essential fields.
     """
     # On Windows, sync_playwright creates its own internal asyncio event loop
     # inside a background thread. By default that loop is SelectorEventLoop,
     # which cannot spawn subprocesses (needed to launch Chromium).
-    # Setting ProactorEventLoopPolicy here (global per-process) ensures the
-    # new loop is ProactorEventLoop. No-op on Linux/macOS.
+    # Setting ProactorEventLoopPolicy here ensures the new loop is ProactorEventLoop.
+    # No-op on Linux/macOS.
     if sys.platform == "win32":
         import asyncio
         asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
-    t0 = time.perf_counter()
-    logger.info("[PARSER] ── START ──────────────────────────────────────────")
-    logger.info(f"[PARSER] URL: {url}")
-
-    # Graceful import — Playwright may not be installed in all environments
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
@@ -379,10 +411,9 @@ def parse_ticket(url: str) -> dict:
             "Run: pip install playwright && playwright install chromium"
         )
 
-    highlighted_sign = _extract_highlighted_sign(url)
-    logger.info(f"[PARSER] highlighted_sign={highlighted_sign!r}")
+    highlighted_sign = _extract_highlighted_sign(source_url)
+    logger.info(f"[PARSER][PW] highlighted_sign={highlighted_sign!r}")
 
-    # Shared state updated by the response listener
     proposals_data: dict = {}
     got_proposals = threading.Event()
 
@@ -390,52 +421,49 @@ def parse_ticket(url: str) -> dict:
         if got_proposals.is_set():
             return
 
-        # Skip static assets — they are noise (CSS, JS bundles, fonts, images)
-        url = response.url
-        if "static.aviasales.com" in url:
+        resp_url = response.url
+        if "static.aviasales.com" in resp_url:
             return
 
-        # Log all non-static responses so we can see what APIs are being called
-        logger.debug(f"[PARSER] response {response.status} {url[:160]}")
+        logger.debug(f"[PARSER][PW] response {response.status} {resp_url[:160]}")
 
-        # Highlight any Aviasales domain hits
-        if "aviasales" in url or "avs.io" in url:
-            logger.info(f"[PARSER] aviasales API response {response.status} {url[:200]}")
+        if "aviasales" in resp_url or "avs.io" in resp_url:
+            logger.info(f"[PARSER][PW] aviasales API response {response.status} {resp_url[:200]}")
 
-        if TICKETS_API_HOST not in response.url:
+        if TICKETS_API_HOST not in resp_url:
             return
 
-        logger.info(f"[PARSER] tickets-api candidate: status={response.status} url={response.url[:200]}")
+        logger.info(f"[PARSER][PW] tickets-api candidate: status={response.status} url={resp_url[:200]}")
 
         if response.status != 200:
-            logger.warning(f"[PARSER] tickets-api non-200 status: {response.status}")
+            logger.warning(f"[PARSER][PW] tickets-api non-200 status: {response.status}")
             return
         try:
             body = response.json()
         except Exception as e:
-            logger.warning(f"[PARSER] tickets-api JSON parse failed: {e}")
+            logger.warning(f"[PARSER][PW] tickets-api JSON parse failed: {e}")
             return
 
         top_keys = list(body.keys())[:10]
-        logger.info(f"[PARSER] tickets-api body keys: {top_keys}")
+        logger.info(f"[PARSER][PW] tickets-api body keys: {top_keys}")
 
         if not isinstance(body.get("proposals"), list) or not body["proposals"]:
             logger.warning(
-                f"[PARSER] tickets-api body has no proposals "
+                f"[PARSER][PW] tickets-api body has no proposals "
                 f"(proposals={body.get('proposals')!r:.50})"
             )
             return
 
-        logger.info(f"[PARSER] tickets-api hit: {response.url}")
+        logger.info(f"[PARSER][PW] tickets-api hit: {resp_url}")
         logger.info(
-            f"[PARSER] proposals received: {len(body['proposals'])} | "
+            f"[PARSER][PW] proposals received: {len(body['proposals'])} | "
             f"airlines in dict: {len(body.get('airlines', {}))}"
         )
         proposals_data.update(body)
         got_proposals.set()
 
     with sync_playwright() as pw:
-        logger.info("[PARSER] Launching Chromium (headless)")
+        logger.info("[PARSER][PW] Launching Chromium (headless)")
         browser = pw.chromium.launch(headless=True)
         context = browser.new_context(
             viewport=VIEWPORT,
@@ -445,82 +473,99 @@ def parse_ticket(url: str) -> dict:
         page = context.new_page()
         page.on("response", on_response)
 
-        # ── Navigate ──────────────────────────────────────────────────────
-        logger.info("[PARSER] Navigating...")
-        # domcontentloaded is enough to get the final redirect URL
-        page.goto(url, wait_until="domcontentloaded", timeout=PARSE_TIMEOUT_SECONDS * 1000)
-        final_url = page.url
-        logger.info(f"[PARSER] DOM ready — final URL: {final_url}")
-
-        # ── Try to extract all data from the URL itself ───────────────────────
-        url_result = _decode_url_data(url, final_url)
-        essential = ('origin_iata', 'destination_iata', 'departure_date',
-                     'airline_iata', 'departure_time', 'price')
-        if all(url_result.get(f) for f in essential):
-            logger.info("[PARSER] ✅ Returning early — all data extracted from URL")
-            await_browser_close = True
-        else:
-            await_browser_close = False
-            logger.info("[PARSER] Waiting for tickets-api response...")
-
-        if await_browser_close:
-            browser.close()
-            elapsed = time.perf_counter() - t0
-            logger.info(f"[PARSER] ── DONE (URL decode) in {elapsed:.1f}s ──────────────")
-            return url_result
+        logger.info("[PARSER][PW] Navigating...")
+        page.goto(source_url, wait_until="domcontentloaded", timeout=PARSE_TIMEOUT_SECONDS * 1000)
+        logger.info(f"[PARSER][PW] DOM ready — final URL: {page.url}")
 
         if not got_proposals.wait(timeout=PARSE_TIMEOUT_SECONDS):
             browser.close()
             raise TimeoutError(
-                f"[PARSER] tickets-api did not respond within {PARSE_TIMEOUT_SECONDS}s"
+                f"[PARSER][PW] tickets-api did not respond within {PARSE_TIMEOUT_SECONDS}s"
             )
 
-        # Wait briefly for additional proposals to stream in
-        logger.info(f"[PARSER] First batch received — waiting {EXTRA_WAIT_SECONDS}s for more...")
+        logger.info(f"[PARSER][PW] First batch received — waiting {EXTRA_WAIT_SECONDS}s for more...")
         time.sleep(EXTRA_WAIT_SECONDS)
         browser.close()
 
     proposals: list = proposals_data.get("proposals", [])
     airlines: dict = proposals_data.get("airlines") or {}
 
-    logger.info(f"[PARSER] Total proposals after wait: {len(proposals)}")
+    logger.info(f"[PARSER][PW] Total proposals after wait: {len(proposals)}")
 
     if not proposals:
-        raise RuntimeError("[PARSER] No proposals found in tickets-api response")
+        raise RuntimeError("[PARSER][PW] No proposals found in tickets-api response")
 
-    # ── Select target proposal ────────────────────────────────────────────────
+    # Select target proposal
     target = None
     if highlighted_sign:
         for p in proposals:
             if p.get("sign") == highlighted_sign:
                 target = p
-                logger.info(f"[PARSER] Matched highlighted_sign={highlighted_sign!r}")
+                logger.info(f"[PARSER][PW] Matched highlighted_sign={highlighted_sign!r}")
                 break
         if target is None:
             logger.warning(
-                f"[PARSER] highlighted_sign={highlighted_sign!r} not found in "
+                f"[PARSER][PW] highlighted_sign={highlighted_sign!r} not found in "
                 f"{len(proposals)} proposals — falling back to first"
             )
 
     if target is None:
         target = proposals[0]
-        logger.info(f"[PARSER] Using first proposal sign={target.get('sign')!r}")
+        logger.info(f"[PARSER][PW] Using first proposal sign={target.get('sign')!r}")
 
-    # ── Build result ──────────────────────────────────────────────────────────
-    result = _build_result(url, target, airlines)
+    result = _build_result(source_url, target, airlines)
 
     elapsed = time.perf_counter() - t0
-    logger.info(
-        f"[PARSER] ── DONE in {elapsed:.1f}s ──────────────────────────────"
-    )
-    logger.info(
-        f"[PARSER] route:       {result['origin_iata']} → {result['destination_iata']}"
-    )
-    logger.info(f"[PARSER] airline:     {result['airline']} ({result['airline_iata']})")
-    logger.info(f"[PARSER] flight:      {result['flight_number']}")
-    logger.info(f"[PARSER] departure:   {result['departure_date']} {result['departure_time']}")
-    logger.info(f"[PARSER] baggage:     {result['baggage_info']}")
-    logger.info(f"[PARSER] price:       {result['price']} {result['currency']}")
-    logger.info(f"[PARSER] sign:        {result['ticket_sign']}")
-
+    logger.info(f"[PARSER][PW] ── DONE in {elapsed:.1f}s ──────────────────────────────")
+    _log_result(result)
     return result
+
+
+# ── Public entry point ────────────────────────────────────────────────────────
+
+def parse_ticket(url: str) -> dict:
+    """
+    Parse an Aviasales URL and return structured flight data.
+
+    Strategy:
+      1. Follow the redirect via httpx (no browser needed).
+      2. Decode all flight data directly from the final URL.
+      3. Return immediately if all essential fields are present.
+      4. Fall back to headless Chromium (Playwright) if data is incomplete.
+
+    Runs synchronously — call via asyncio.to_thread() from an async context
+    so the uvicorn event loop is not blocked.
+
+    Raises
+    ------
+    RuntimeError   if the fallback Playwright path is needed but not installed.
+    TimeoutError   if the Playwright fallback tickets-api does not respond in time.
+    """
+    t0 = time.perf_counter()
+    logger.info("[PARSER] ── START ──────────────────────────────────────────")
+    logger.info(f"[PARSER] URL: {url}")
+
+    # ── Step 1: Follow redirect via httpx (fast, no browser) ─────────────────
+    final_url = _resolve_redirect(url)
+
+    # ── Step 2: Decode flight data from URL ───────────────────────────────────
+    result = _decode_url_data(url, final_url)
+
+    # ── Step 3: Return early if all essential fields found ────────────────────
+    if all(result.get(f) for f in _ESSENTIAL_FIELDS):
+        elapsed = time.perf_counter() - t0
+        logger.info(f"[PARSER] ✅ URL decode complete in {elapsed:.1f}s — no browser needed")
+        _log_result(result)
+        return result
+
+    # ── Step 4: Playwright fallback ───────────────────────────────────────────
+    logger.info("[PARSER] URL decode incomplete — falling back to Playwright")
+    return _parse_with_playwright(url, t0)
+
+
+def _log_result(result: dict) -> None:
+    """Log the key fields of a parse result."""
+    logger.info(f"[PARSER] route:      {result['origin_iata']} → {result['destination_iata']}")
+    logger.info(f"[PARSER] airline:    {result['airline']} ({result['airline_iata']})")
+    logger.info(f"[PARSER] departure:  {result['departure_date']} {result['departure_time']}")
+    logger.info(f"[PARSER] price:      {result['price']} {result['currency']}")
