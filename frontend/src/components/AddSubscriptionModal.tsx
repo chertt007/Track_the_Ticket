@@ -8,15 +8,37 @@ import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
 import Box from '@mui/material/Box'
 import CircularProgress from '@mui/material/CircularProgress'
+import Divider from '@mui/material/Divider'
 import Fade from '@mui/material/Fade'
+import ToggleButton from '@mui/material/ToggleButton'
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import LinkIcon from '@mui/icons-material/Link'
+import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff'
+import LuggageIcon from '@mui/icons-material/Luggage'
 import { useT } from '../hooks/useT'
 import { parseTicketUrl } from '../api'
 import { modalStyles as s } from './AddSubscriptionModal.styles'
 
 const AVIASALES_DOMAINS = ['aviasales.ru', 'aviasales.com', 'avs.io']
 
-type Step = 'input' | 'parsing'
+type Step = 'input' | 'parsing' | 'confirm'
+
+interface ParsedData {
+  source_url: string
+  origin_iata: string | null
+  destination_iata: string | null
+  departure_date: string | null
+  departure_time: string | null
+  airline: string | null
+  airline_iata: string | null
+  price: number | null
+  currency: string
+  passengers: number | null
+  is_round_trip: boolean
+  baggage_info: string | null
+  flight_number: string | null
+  ticket_sign: string | null
+}
 
 interface Props {
   open: boolean
@@ -29,6 +51,8 @@ export default function AddSubscriptionModal({ open, onClose }: Props) {
   const [step, setStep] = useState<Step>('input')
   const [url, setUrl] = useState('')
   const [error, setError] = useState('')
+  const [parsedData, setParsedData] = useState<ParsedData | null>(null)
+  const [needsBaggage, setNeedsBaggage] = useState<boolean | null>(null)
 
   const validate = (): string => {
     const trimmed = url.trim()
@@ -45,8 +69,9 @@ export default function AddSubscriptionModal({ open, onClose }: Props) {
     setStep('parsing')
     parseTicketUrl(url.trim())
       .then((data) => {
-        console.log('[TrackTheTicket] parse response:', data)
-        setStep('input')
+        setParsedData(data)
+        setNeedsBaggage(null)
+        setStep('confirm')
       })
       .catch((e) => {
         const msg = e?.response?.data?.detail ?? e?.message ?? t('urlInvalid')
@@ -55,23 +80,44 @@ export default function AddSubscriptionModal({ open, onClose }: Props) {
       })
   }
 
+  const handleConfirm = () => {
+    console.log('[TrackTheTicket] confirmed subscription:', {
+      ...parsedData,
+      needs_baggage: needsBaggage,
+    })
+  }
+
+  const handleBack = () => {
+    setStep('input')
+  }
+
   const handleClose = () => {
     if (step === 'parsing') return
     setStep('input')
     setUrl('')
     setError('')
+    setParsedData(null)
+    setNeedsBaggage(null)
     onClose()
   }
+
+  const titleText =
+    step === 'confirm' ? t('confirmTitle') :
+    step === 'parsing' ? t('previewLoading') :
+    t('addSubscriptionTitle')
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth PaperProps={{ sx: s.paper }}>
       <DialogTitle sx={s.dialogTitle}>
         <Box sx={s.titleRow}>
           <Box sx={s.iconCircle}>
-            <LinkIcon sx={{ color: '#fff', fontSize: 18 }} />
+            {step === 'confirm'
+              ? <FlightTakeoffIcon sx={{ color: '#fff', fontSize: 18 }} />
+              : <LinkIcon sx={{ color: '#fff', fontSize: 18 }} />
+            }
           </Box>
           <Typography variant="h6" fontWeight={700} color="primary.dark">
-            {step === 'input' ? t('addSubscriptionTitle') : t('previewLoading')}
+            {titleText}
           </Typography>
         </Box>
       </DialogTitle>
@@ -101,7 +147,7 @@ export default function AddSubscriptionModal({ open, onClose }: Props) {
           </Fade>
         )}
 
-        {/* ── Step: parsing (Playwright running on backend) ───────────── */}
+        {/* ── Step: parsing ───────────────────────────────────────────── */}
         {step === 'parsing' && (
           <Fade in>
             <Box sx={s.parsingBox}>
@@ -109,6 +155,84 @@ export default function AddSubscriptionModal({ open, onClose }: Props) {
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
                 {t('previewLoading')}
               </Typography>
+            </Box>
+          </Fade>
+        )}
+
+        {/* ── Step: confirm ───────────────────────────────────────────── */}
+        {step === 'confirm' && parsedData && (
+          <Fade in>
+            <Box>
+              {/* Flight info card */}
+              <Box sx={s.confirmCard}>
+
+                {/* Route: ORIGIN → DEST */}
+                <Box sx={s.routeRow}>
+                  <Box sx={s.routeAirportBlock}>
+                    <Typography sx={s.routeAirportCode}>
+                      {parsedData.origin_iata ?? '—'}
+                    </Typography>
+                  </Box>
+                  <Box sx={s.routeArrowBlock}>
+                    <FlightTakeoffIcon sx={s.routeArrowIcon} />
+                  </Box>
+                  <Box sx={s.routeAirportBlock}>
+                    <Typography sx={s.routeAirportCode}>
+                      {parsedData.destination_iata ?? '—'}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                {/* Details: airline / departure / price */}
+                <Box sx={s.infoGrid}>
+                  <Box sx={s.infoItem}>
+                    <Typography sx={s.infoLabel}>{t('confirmAirline')}</Typography>
+                    <Typography sx={s.infoValue}>
+                      {parsedData.airline ?? parsedData.airline_iata ?? '—'}
+                    </Typography>
+                  </Box>
+                  <Box sx={s.infoItem}>
+                    <Typography sx={s.infoLabel}>{t('departure')}</Typography>
+                    <Typography sx={s.infoValue}>
+                      {parsedData.departure_date ?? '—'}
+                      {parsedData.departure_time ? ` ${parsedData.departure_time}` : ''}
+                    </Typography>
+                  </Box>
+                  <Box sx={s.infoItem}>
+                    <Typography sx={s.infoLabel}>{t('confirmPrice')}</Typography>
+                    <Typography sx={s.infoPriceValue}>
+                      {parsedData.price != null
+                        ? `${parsedData.price} ${parsedData.currency}`
+                        : '—'}
+                    </Typography>
+                  </Box>
+                </Box>
+
+              </Box>
+
+              {/* Baggage question */}
+              <Divider sx={{ mb: 2 }} />
+              <Box sx={s.baggageSection}>
+                <Box sx={s.baggageLabelRow}>
+                  <LuggageIcon sx={s.baggageIcon} />
+                  <Typography variant="body2" fontWeight={600}>
+                    {t('confirmBaggageQuestion')}
+                  </Typography>
+                </Box>
+                <ToggleButtonGroup
+                  exclusive
+                  value={needsBaggage}
+                  onChange={(_, val) => { if (val !== null) setNeedsBaggage(val) }}
+                  sx={s.baggageToggleGroup}
+                >
+                  <ToggleButton value={true}>
+                    {t('baggageYes')}
+                  </ToggleButton>
+                  <ToggleButton value={false}>
+                    {t('baggageNo')}
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
             </Box>
           </Fade>
         )}
@@ -131,6 +255,21 @@ export default function AddSubscriptionModal({ open, onClose }: Props) {
           <Button variant="outlined" disabled>
             {t('previewLoading')}
           </Button>
+        )}
+
+        {step === 'confirm' && (
+          <>
+            <Button variant="outlined" onClick={handleBack}>
+              {t('backLink')}
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleConfirm}
+              disabled={needsBaggage === null}
+            >
+              {t('confirmButton')}
+            </Button>
+          </>
         )}
       </DialogActions>
     </Dialog>

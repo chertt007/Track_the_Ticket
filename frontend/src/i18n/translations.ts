@@ -38,6 +38,13 @@ export const translations = {
     urlNotAviasales: 'Вставьте ссылку с Aviasales (aviasales.ru или aviasales.com)',
     previewCheck: 'Проверить',
     previewLoading: 'Разбираем...',
+    confirmTitle: 'Подтвердите рейс',
+    confirmAirline: 'Авиакомпания',
+    confirmPrice: 'Цена',
+    confirmBaggageQuestion: 'Нужен ли багаж?',
+    baggageYes: 'Да',
+    baggageNo: 'Нет',
+    confirmButton: 'Подтвердить',
 
     // ScreenshotPreview
     screenshotAlt: 'Скриншот цены',
@@ -161,6 +168,13 @@ export const translations = {
     urlNotAviasales: 'Please paste an Aviasales link (aviasales.ru or aviasales.com)',
     previewCheck: 'Check',
     previewLoading: 'Parsing...',
+    confirmTitle: 'Confirm flight',
+    confirmAirline: 'Airline',
+    confirmPrice: 'Price',
+    confirmBaggageQuestion: 'Do you need baggage?',
+    baggageYes: 'Yes',
+    baggageNo: 'No',
+    confirmButton: 'Confirm',
 
     // ScreenshotPreview
     screenshotAlt: 'Price screenshot',
