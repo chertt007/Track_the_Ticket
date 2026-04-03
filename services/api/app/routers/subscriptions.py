@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,8 +11,10 @@ from app.logging_config import get_logger
 from app.models.price_history import PriceHistory
 from app.models.subscription import Subscription
 from app.models.user import User
+from app.schemas.parse import ParseRequest, ParseResponse
 from app.schemas.price_history import PriceHistoryOut
 from app.schemas.subscription import SubscriptionCreate, SubscriptionOut
+from app.ticket_parser import parse_ticket
 
 router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
 logger = get_logger(__name__)
@@ -35,6 +39,51 @@ async def _get_own_subscription(
         )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
     return subscription
+
+
+# ── POST /subscriptions/parse ─────────────────────────────────────────────────
+# Local-dev endpoint: opens the URL in Playwright, intercepts the Aviasales
+# tickets-api response, and returns structured flight data.
+# In production this is replaced by the async link-parser Lambda (SQS trigger).
+
+@router.post("/parse", response_model=ParseResponse)
+async def parse_subscription_url(
+    body: ParseRequest,
+    current_user: User = Depends(get_current_user),
+) -> ParseResponse:
+    logger.info(
+        f"[PARSE] request | user_id={current_user.id} | url={body.source_url!r}"
+    )
+    try:
+        result = await asyncio.to_thread(parse_ticket, body.source_url)
+        logger.info(
+            f"[PARSE] success | user_id={current_user.id} "
+            f"| flight={result.get('flight_number')} "
+            f"| route={result.get('origin_iata')}->{result.get('destination_iata')}"
+        )
+        return ParseResponse(**result)
+
+    except TimeoutError as exc:
+        logger.error(f"[PARSE] timeout | user_id={current_user.id} | error={exc!s}")
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="Parser timed out waiting for Aviasales API response.",
+        )
+    except RuntimeError as exc:
+        logger.error(f"[PARSE] runtime error | user_id={current_user.id} | error={exc!s}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        )
+    except Exception as exc:
+        logger.error(
+            f"[PARSE] unexpected error | user_id={current_user.id} "
+            f"| error_type={type(exc).__name__} | error={exc!s}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unexpected error during parsing.",
+        )
 
 
 # ── API-05: POST /subscriptions ───────────────────────────────────────────────
@@ -90,7 +139,7 @@ async def list_subscriptions(
 
 # ── API-07: GET /subscriptions/{id} ──────────────────────────────────────────
 
-@router.get("/{subscription_id}", response_model=SubscriptionOut)
+@router.get("/{subscription_id:int}", response_model=SubscriptionOut)
 async def get_subscription(
     subscription_id: int,
     current_user: User = Depends(get_current_user),
@@ -101,7 +150,7 @@ async def get_subscription(
 
 # ── API-08: DELETE /subscriptions/{id} ───────────────────────────────────────
 
-@router.delete("/{subscription_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{subscription_id:int}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_subscription(
     subscription_id: int,
     current_user: User = Depends(get_current_user),
@@ -118,7 +167,7 @@ async def delete_subscription(
 
 # ── API-09: GET /subscriptions/{id}/prices ────────────────────────────────────
 
-@router.get("/{subscription_id}/prices", response_model=list[PriceHistoryOut])
+@router.get("/{subscription_id:int}/prices", response_model=list[PriceHistoryOut])
 async def get_price_history(
     subscription_id: int,
     current_user: User = Depends(get_current_user),
@@ -141,7 +190,7 @@ async def get_price_history(
 
 # ── API-10: GET /subscriptions/{id}/screenshots ───────────────────────────────
 
-@router.get("/{subscription_id}/screenshots", response_model=list[str])
+@router.get("/{subscription_id:int}/screenshots", response_model=list[str])
 async def get_screenshots(
     subscription_id: int,
     current_user: User = Depends(get_current_user),

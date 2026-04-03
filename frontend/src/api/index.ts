@@ -26,3 +26,13 @@ apiClient.interceptors.response.use(
   }
 )
 
+// ── Subscriptions ─────────────────────────────────────────────────────────────
+
+export const parseTicketUrl = async (sourceUrl: string) => {
+  const { data } = await apiClient.post(
+    '/subscriptions/parse',
+    { source_url: sourceUrl },
+    { timeout: 60_000 },
+  )
+  return data
+}

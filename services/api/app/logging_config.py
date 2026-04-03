@@ -24,9 +24,30 @@ class PrettyColorFormatter(colorlog.ColoredFormatter):
         "CRITICAL": "🔥",
     }
 
+    # Standard LogRecord attribute names — we exclude these when building the
+    # extra_fields string so only user-supplied extra={} keys are shown.
+    _STANDARD_ATTRS = frozenset({
+        "name", "msg", "args", "created", "filename", "funcName", "levelname",
+        "levelno", "lineno", "module", "msecs", "pathname", "process",
+        "processName", "relativeCreated", "stack_info", "thread", "threadName",
+        "taskName", "exc_info", "exc_text", "message", "asctime",
+        "icon", "log_color", "reset", "bold_log_color",
+    })
+
     def format(self, record: logging.LogRecord) -> str:
         # Attach icon so it can be referenced in the format string
         record.icon = self.LEVEL_ICONS.get(record.levelname, "  ")
+
+        # Build extra_fields string from any user-supplied extra={} keys
+        extras = {
+            k: v for k, v in record.__dict__.items()
+            if k not in self._STANDARD_ATTRS and not k.startswith("_")
+        }
+        if extras:
+            record.extra_fields = "  " + "  ".join(f"{k}={v!r}" for k, v in extras.items())
+        else:
+            record.extra_fields = ""
+
         return super().format(record)
 
 
@@ -112,9 +133,8 @@ def setup_logging(environment: str = "local", log_level: str = "INFO") -> None:
 
     # Silence noisy third-party loggers
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
-    logging.getLogger("sqlalchemy.engine").setLevel(
-        logging.INFO if environment == "local" else logging.WARNING
-    )
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.pool").setLevel(logging.WARNING)
     logging.getLogger("botocore").setLevel(logging.WARNING)
     logging.getLogger("httpx").setLevel(logging.WARNING)
 

@@ -11,6 +11,7 @@ import CircularProgress from '@mui/material/CircularProgress'
 import Fade from '@mui/material/Fade'
 import LinkIcon from '@mui/icons-material/Link'
 import { useT } from '../hooks/useT'
+import { parseTicketUrl } from '../api'
 import { modalStyles as s } from './AddSubscriptionModal.styles'
 
 const AVIASALES_DOMAINS = ['aviasales.ru', 'aviasales.com', 'avs.io']
@@ -42,7 +43,16 @@ export default function AddSubscriptionModal({ open, onClose }: Props) {
     const err = validate()
     if (err) { setError(err); return }
     setStep('parsing')
-    // TODO: trigger backend Playwright parsing here
+    parseTicketUrl(url.trim())
+      .then((data) => {
+        console.log('[TrackTheTicket] parse response:', data)
+        setStep('input')
+      })
+      .catch((e) => {
+        const msg = e?.response?.data?.detail ?? e?.message ?? t('urlInvalid')
+        setError(msg)
+        setStep('input')
+      })
   }
 
   const handleClose = () => {
