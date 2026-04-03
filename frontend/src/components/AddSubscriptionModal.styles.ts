@@ -49,4 +49,13 @@ export const modalStyles = {
     fontFamily: 'monospace',
     fontSize: '0.85rem',
   } as SxProps<Theme>,
+
+  // Centered loading state
+  parsingBox: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    py: 5,
+  } as SxProps<Theme>,
 }

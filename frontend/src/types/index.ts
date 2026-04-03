@@ -36,3 +36,5 @@ export interface User {
   email: string
   telegramId: string | null
 }
+
+// TicketPreview will be added back once the backend Playwright parsing is wired up

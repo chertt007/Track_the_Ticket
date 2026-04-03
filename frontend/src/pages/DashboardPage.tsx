@@ -30,13 +30,17 @@ export default function DashboardPage() {
   const dispatch = useAppDispatch()
   const subscriptions = useAppSelector(st => st.subscriptions.items)
   const loading = useAppSelector(st => st.subscriptions.loading)
+  const status = useAppSelector(st => st.subscriptions.status)
   const error = useAppSelector(st => st.subscriptions.error)
   const [modalOpen, setModalOpen] = useState(false)
 
-  // Fetch real subscriptions from API on mount
+  // Only fetch when status is idle — prevents duplicate requests from
+  // React 18 StrictMode double-invoking effects in development.
   useEffect(() => {
-    dispatch(fetchSubscriptions())
-  }, [dispatch])
+    if (status === 'idle') {
+      dispatch(fetchSubscriptions())
+    }
+  }, [dispatch, status])
 
   const subscriptionCount = locale === 'ru-RU'
     ? ruPlural(subscriptions.length, t('subscriptionOne'), t('subscriptionFew'), t('subscriptionMany'))

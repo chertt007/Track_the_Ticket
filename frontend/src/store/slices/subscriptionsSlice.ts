@@ -63,8 +63,11 @@ export const deleteSubscriptionApi = createAsyncThunk<string, string>(
 
 // ── Slice ─────────────────────────────────────────────────────────────────────
 
+type FetchStatus = 'idle' | 'loading' | 'succeeded' | 'failed'
+
 interface SubscriptionsState {
   items: Subscription[]
+  status: FetchStatus  // tracks fetch lifecycle — prevents duplicate requests
   loading: boolean
   error: string | null
   checkingId: string | null
@@ -72,6 +75,7 @@ interface SubscriptionsState {
 
 const initialState: SubscriptionsState = {
   items:      [],
+  status:     'idle',
   loading:    false,
   error:      null,
   checkingId: null,
@@ -119,14 +123,17 @@ const subscriptionsSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(fetchSubscriptions.pending, (state) => {
+        state.status  = 'loading'
         state.loading = true
         state.error   = null
       })
       .addCase(fetchSubscriptions.fulfilled, (state, action) => {
+        state.status  = 'succeeded'
         state.loading = false
         state.items   = action.payload
       })
       .addCase(fetchSubscriptions.rejected, (state, action) => {
+        state.status  = 'failed'
         state.loading = false
         state.error   = action.error.message ?? 'Failed to load subscriptions'
       })

@@ -8,13 +8,14 @@ import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
 import Box from '@mui/material/Box'
 import CircularProgress from '@mui/material/CircularProgress'
+import Fade from '@mui/material/Fade'
 import LinkIcon from '@mui/icons-material/Link'
 import { useT } from '../hooks/useT'
-import { useAppDispatch } from '../hooks'
-import { addSubscription } from '../store/slices/subscriptionsSlice'
 import { modalStyles as s } from './AddSubscriptionModal.styles'
 
-const AVIASALES_DOMAINS = ['aviasales.ru', 'aviasales.com']
+const AVIASALES_DOMAINS = ['aviasales.ru', 'aviasales.com', 'avs.io']
+
+type Step = 'input' | 'parsing'
 
 interface Props {
   open: boolean
@@ -23,37 +24,30 @@ interface Props {
 
 export default function AddSubscriptionModal({ open, onClose }: Props) {
   const t = useT()
-  const dispatch = useAppDispatch()
+
+  const [step, setStep] = useState<Step>('input')
   const [url, setUrl] = useState('')
   const [error, setError] = useState('')
-  const [submitting, setSubmitting] = useState(false)
 
   const validate = (): string => {
     const trimmed = url.trim()
     if (!trimmed) return t('urlRequired')
     if (!trimmed.startsWith('http')) return t('urlInvalid')
-    const isAviasales = AVIASALES_DOMAINS.some(domain => trimmed.includes(domain))
+    const isAviasales = AVIASALES_DOMAINS.some(d => trimmed.includes(d))
     if (!isAviasales) return t('urlNotAviasales')
     return ''
   }
 
-  const handleSubmit = () => {
+  const handleCheck = () => {
     const err = validate()
     if (err) { setError(err); return }
-
-    setSubmitting(true)
-    // Simulate async submission (will be replaced by real API call in FE-07)
-    setTimeout(() => {
-      dispatch(addSubscription({ url: url.trim() }))
-      setUrl('')
-      setError('')
-      setSubmitting(false)
-      onClose()
-    }, 800)
+    setStep('parsing')
+    // TODO: trigger backend Playwright parsing here
   }
 
   const handleClose = () => {
-    if (submitting) return
+    if (step === 'parsing') return
+    setStep('input')
     setUrl('')
     setError('')
     onClose()
@@ -67,42 +61,67 @@ export default function AddSubscriptionModal({ open, onClose }: Props) {
             <LinkIcon sx={{ color: '#fff', fontSize: 18 }} />
           </Box>
           <Typography variant="h6" fontWeight={700} color="primary.dark">
-            {t('addSubscriptionTitle')}
+            {step === 'input' ? t('addSubscriptionTitle') : t('previewLoading')}
           </Typography>
         </Box>
       </DialogTitle>
 
       <DialogContent sx={s.dialogContent}>
-        <Typography variant="body2" color="text.secondary" sx={s.hintText}>
-          {t('urlHint')}
-        </Typography>
-        <TextField
-          fullWidth
-          autoFocus
-          label={t('urlLabel')}
-          placeholder={t('urlPlaceholder')}
-          value={url}
-          onChange={e => { setUrl(e.target.value); setError('') }}
-          error={!!error}
-          helperText={error}
-          disabled={submitting}
-          onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-          InputProps={{ sx: s.inputProps }}
-        />
+
+        {/* ── Step: URL input ─────────────────────────────────────────── */}
+        {step === 'input' && (
+          <Fade in>
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={s.hintText}>
+                {t('urlHint')}
+              </Typography>
+              <TextField
+                fullWidth
+                autoFocus
+                label={t('urlLabel')}
+                placeholder={t('urlPlaceholder')}
+                value={url}
+                onChange={e => { setUrl(e.target.value); setError('') }}
+                error={!!error}
+                helperText={error}
+                onKeyDown={e => e.key === 'Enter' && handleCheck()}
+                InputProps={{ sx: s.inputProps }}
+              />
+            </Box>
+          </Fade>
+        )}
+
+        {/* ── Step: parsing (Playwright running on backend) ───────────── */}
+        {step === 'parsing' && (
+          <Fade in>
+            <Box sx={s.parsingBox}>
+              <CircularProgress size={44} thickness={3} color="primary" />
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                {t('previewLoading')}
+              </Typography>
+            </Box>
+          </Fade>
+        )}
+
       </DialogContent>
 
       <DialogActions sx={s.dialogActions}>
-        <Button variant="outlined" onClick={handleClose} disabled={submitting}>
-          {t('cancel')}
-        </Button>
-        <Button
-          variant="contained"
-          onClick={handleSubmit}
-          disabled={submitting}
-          startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : undefined}
-        >
-          {submitting ? t('checking') : t('add')}
-        </Button>
+        {step === 'input' && (
+          <>
+            <Button variant="outlined" onClick={handleClose}>
+              {t('cancel')}
+            </Button>
+            <Button variant="contained" onClick={handleCheck}>
+              {t('previewCheck')}
+            </Button>
+          </>
+        )}
+
+        {step === 'parsing' && (
+          <Button variant="outlined" disabled>
+            {t('previewLoading')}
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   )

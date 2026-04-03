@@ -58,3 +58,11 @@ yarn-error.log*
 
 # ── Docker ───────────────────────────────────────────────────────────────────
 .docker/
+
+# ── Work in progress — not ready for commit ──────────────────────────────────
+services/link-parser/
+services/api/app/schemas/preview.py
+services/api/app/utils/
+frontend/src/components/TicketPreviewCard.tsx
+frontend/src/components/TicketPreviewCard.styles.ts
+frontend/src/utils/

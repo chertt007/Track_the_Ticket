@@ -36,6 +36,8 @@ export const translations = {
     urlRequired: 'Введите ссылку',
     urlInvalid: 'Введите корректную ссылку (начинается с http)',
     urlNotAviasales: 'Вставьте ссылку с Aviasales (aviasales.ru или aviasales.com)',
+    previewCheck: 'Проверить',
+    previewLoading: 'Разбираем...',
 
     // ScreenshotPreview
     screenshotAlt: 'Скриншот цены',
@@ -157,6 +159,8 @@ export const translations = {
     urlRequired: 'Please enter a URL',
     urlInvalid: 'Please enter a valid URL (must start with http)',
     urlNotAviasales: 'Please paste an Aviasales link (aviasales.ru or aviasales.com)',
+    previewCheck: 'Check',
+    previewLoading: 'Parsing...',
 
     // ScreenshotPreview
     screenshotAlt: 'Price screenshot',
