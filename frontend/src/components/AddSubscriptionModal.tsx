@@ -93,6 +93,7 @@ export default function AddSubscriptionModal({ open, onClose }: Props) {
       departure_time: parsedData.departure_time ?? null,
       flight_number: parsedData.flight_number ?? null,
       airline: parsedData.airline ?? parsedData.airline_iata ?? null,
+      airline_iata: parsedData.airline_iata ?? null,
       airline_domain: null,
       baggage_info: needsBaggage ? 'with_baggage' : 'no_baggage',
     }))

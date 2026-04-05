@@ -12,6 +12,7 @@ class SubscriptionCreate(BaseModel):
     departure_time: time | None = None
     flight_number: str | None = None
     airline: str | None = None
+    airline_iata: str | None = None
     airline_domain: str | None = None
     baggage_info: str | None = None
     check_frequency: int = 3
@@ -28,6 +29,7 @@ class SubscriptionOut(BaseModel):
     departure_time: time | None
     flight_number: str | None
     airline: str | None
+    airline_iata: str | None
     airline_domain: str | None
     baggage_info: str | None
 

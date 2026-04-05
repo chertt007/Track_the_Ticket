@@ -47,6 +47,7 @@ export interface CreateSubscriptionPayload {
   departure_time: string | null
   flight_number: string | null
   airline: string | null
+  airline_iata: string | null
   airline_domain: string | null
   baggage_info: string | null
   check_frequency?: number

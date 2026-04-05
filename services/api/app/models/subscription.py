@@ -15,6 +15,7 @@ class Subscription(Base):
 
     flight_number: Mapped[str | None] = mapped_column(String(16), nullable=True)
     airline: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    airline_iata: Mapped[str | None] = mapped_column(String(4), nullable=True)
     airline_domain: Mapped[str | None] = mapped_column(String(255), nullable=True)
     origin_iata: Mapped[str] = mapped_column(String(3), nullable=False)
     destination_iata: Mapped[str] = mapped_column(String(3), nullable=False)
