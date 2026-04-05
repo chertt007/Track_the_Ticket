@@ -1,4 +1,8 @@
+from datetime import datetime, timedelta, timezone
+from decimal import Decimal
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +15,16 @@ from app.models.subscription import Subscription
 from app.models.user import User
 from app.schemas.price_history import PriceHistoryOut
 from app.schemas.subscription import SubscriptionCreate, SubscriptionOut
+
+SUBSCRIPTION_LIFETIME_DAYS = 14
+
+
+class CheckResult(BaseModel):
+    price: float
+    currency: str
+    flight_number: str
+    checked_at: datetime
+    screenshot_b64: str | None = None
 
 router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
 logger = get_logger(__name__)
@@ -45,13 +59,20 @@ async def create_subscription(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Subscription:
-    # Create subscription in pending state.
-    # Link-parser + strategy-agent will fill in flight details asynchronously.
     subscription = Subscription(
         user_id=current_user.id,
         source_url=str(body.source_url),
+        origin_iata=body.origin_iata,
+        destination_iata=body.destination_iata,
+        departure_date=body.departure_date,
+        departure_time=body.departure_time,
+        flight_number=body.flight_number,
+        airline=body.airline,
+        airline_domain=body.airline_domain,
+        baggage_info=body.baggage_info,
         check_frequency=body.check_frequency,
-        status="pending",
+        status="active",
+        expires_at=datetime.now(timezone.utc) + timedelta(days=SUBSCRIPTION_LIFETIME_DAYS),
     )
     db.add(subscription)
     await db.commit()
@@ -61,7 +82,8 @@ async def create_subscription(
         extra={
             "subscription_id": subscription.id,
             "user_id": current_user.id,
-            "source_url": str(body.source_url),
+            "route": f"{body.origin_iata}->{body.destination_iata}",
+            "flight": body.flight_number,
         },
     )
     return subscription
@@ -173,3 +195,74 @@ async def get_screenshots(
         extra={"subscription_id": subscription_id, "count": len(urls)},
     )
     return urls
+
+
+# ── POST /subscriptions/{id}/check ────────────────────────────────────────────
+# Manual price check trigger. Runs browser-use agent, saves result to DB,
+# returns price + screenshot (base64) to the frontend.
+
+@router.post("/{subscription_id:int}/check", response_model=CheckResult)
+async def check_subscription_price(
+    subscription_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> CheckResult:
+    from app.price_checker import run_price_check
+
+    sub = await _get_own_subscription(subscription_id, current_user, db)
+
+    if not sub.airline_domain:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Subscription has no airline_domain — cannot run price check.",
+        )
+
+    logger.info(
+        "manual price check started",
+        extra={"subscription_id": subscription_id, "user_id": current_user.id},
+    )
+
+    with_baggage = sub.baggage_info not in (None, "", "no_baggage")
+
+    result = await run_price_check(
+        airline_domain=sub.airline_domain,
+        origin_iata=sub.origin_iata,
+        destination_iata=sub.destination_iata,
+        departure_date=str(sub.departure_date),
+        flight_number=sub.flight_number or "",
+        with_baggage=with_baggage,
+    )
+
+    now = datetime.now(timezone.utc)
+
+    # Save to price_history
+    record = PriceHistory(
+        subscription_id=sub.id,
+        price=Decimal(str(result.price)),
+        currency=result.currency,
+        s3_key=None,          # S3 upload handled separately in Lambda
+        status="ok" if result.price > 0 else "no_price",
+        checked_at=now,
+    )
+    db.add(record)
+
+    # Update last_checked_at on subscription
+    sub.last_checked_at = now
+    await db.commit()
+
+    logger.info(
+        "manual price check done",
+        extra={
+            "subscription_id": subscription_id,
+            "price": result.price,
+            "currency": result.currency,
+        },
+    )
+
+    return CheckResult(
+        price=result.price,
+        currency=result.currency,
+        flight_number=result.flight_number,
+        checked_at=now,
+        screenshot_b64=result.screenshot_b64,
+    )

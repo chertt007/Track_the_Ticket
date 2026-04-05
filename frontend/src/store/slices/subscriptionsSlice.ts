@@ -1,7 +1,7 @@
 // subscriptionsSlice — real API, no mock data
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
 import type { Subscription } from '../../types'
-import { apiClient } from '../../api'
+import { apiClient, createSubscription, type CreateSubscriptionPayload } from '../../api'
 
 // ── API response type (snake_case from FastAPI) ───────────────────────────────
 
@@ -40,6 +40,7 @@ function mapSubscription(raw: SubscriptionApiResponse): Subscription {
     lastCheckedAt:   raw.last_checked_at,
     lastPrice:       null, // fetched separately via GET /subscriptions/{id}/prices
     currency:        'RUB',
+    screenshotUrl:   undefined,
   }
 }
 
@@ -50,6 +51,32 @@ export const fetchSubscriptions = createAsyncThunk<Subscription[]>(
   async () => {
     const response = await apiClient.get<SubscriptionApiResponse[]>('/subscriptions')
     return response.data.map(mapSubscription)
+  },
+)
+
+export const createSubscriptionApi = createAsyncThunk<Subscription, CreateSubscriptionPayload>(
+  'subscriptions/createApi',
+  async (payload: CreateSubscriptionPayload) => {
+    const raw = await createSubscription(payload)
+    return mapSubscription(raw)
+  },
+)
+export interface CheckResult {
+  price: number
+  currency: string
+  flight_number: string
+  checked_at: string
+  screenshot_b64: string | null
+}
+
+export const checkSubscriptionApi = createAsyncThunk<
+  { id: string; result: CheckResult },
+  string
+>(
+  'subscriptions/checkApi',
+  async (id: string) => {
+    const { data } = await apiClient.post<CheckResult>(`/subscriptions/${id}/check`)
+    return { id, result: data }
   },
 )
 
@@ -139,6 +166,22 @@ const subscriptionsSlice = createSlice({
       })
       .addCase(deleteSubscriptionApi.fulfilled, (state, action) => {
         state.items = state.items.filter(s => s.id !== action.payload)
+      })
+      .addCase(createSubscriptionApi.fulfilled, (state, action) => {
+        state.items.unshift(action.payload)
+      })
+      .addCase(checkSubscriptionApi.fulfilled, (state, action) => {
+        const { id, result } = action.payload
+        const sub = state.items.find(s => s.id === id)
+        if (sub) {
+          sub.lastPrice = result.price
+          sub.currency = result.currency
+          sub.lastCheckedAt = result.checked_at
+          if (result.screenshot_b64) {
+            sub.screenshotUrl = `data:image/png;base64,${result.screenshot_b64}`
+          }
+        }
+        state.checkingId = null
       })
   },
 })

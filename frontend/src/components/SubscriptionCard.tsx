@@ -13,7 +13,7 @@ import { useNavigate } from 'react-router-dom'
 import { useT } from '../hooks/useT'
 import { useLocale } from '../hooks/useLocale'
 import { useAppDispatch, useAppSelector } from '../hooks'
-import { setCheckingId } from '../store/slices/subscriptionsSlice'
+import { setCheckingId, checkSubscriptionApi } from '../store/slices/subscriptionsSlice'
 import ScreenshotPreview from './ScreenshotPreview'
 import { cardStyles as s } from './SubscriptionCard.styles'
 import type { Subscription } from '../types'
@@ -33,7 +33,7 @@ export default function SubscriptionCard({ subscription: sub }: Props) {
   const handleCheck = (e: React.MouseEvent) => {
     e.stopPropagation()
     dispatch(setCheckingId(sub.id))
-    setTimeout(() => dispatch(setCheckingId(null)), 2000)
+    dispatch(checkSubscriptionApi(sub.id))
   }
 
   const formattedDate = sub.departureDate !== '—'
@@ -91,7 +91,7 @@ export default function SubscriptionCard({ subscription: sub }: Props) {
       {/* ── Screenshot ───────────────────────────────────────────────────── */}
       <Box sx={s.screenshotBox}>
         <ScreenshotPreview
-          src={sub.mockScreenshotUrl ?? 'https://placehold.co/320x180/9B1B5A/white?text=No+data'}
+          src={sub.screenshotUrl ?? 'https://placehold.co/320x180/9B1B5A/white?text=No+data'}
         />
       </Box>
 

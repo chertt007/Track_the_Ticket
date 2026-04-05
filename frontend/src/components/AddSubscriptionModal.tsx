@@ -17,6 +17,8 @@ import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff'
 import LuggageIcon from '@mui/icons-material/Luggage'
 import { useT } from '../hooks/useT'
 import { parseTicketUrl } from '../api'
+import { useAppDispatch } from '../hooks'
+import { createSubscriptionApi } from '../store/slices/subscriptionsSlice'
 import { modalStyles as s } from './AddSubscriptionModal.styles'
 
 const AVIASALES_DOMAINS = ['aviasales.ru', 'aviasales.com', 'avs.io']
@@ -47,6 +49,7 @@ interface Props {
 
 export default function AddSubscriptionModal({ open, onClose }: Props) {
   const t = useT()
+  const dispatch = useAppDispatch()
 
   const [step, setStep] = useState<Step>('input')
   const [url, setUrl] = useState('')
@@ -80,11 +83,20 @@ export default function AddSubscriptionModal({ open, onClose }: Props) {
       })
   }
 
-  const handleConfirm = () => {
-    console.log('[TrackTheTicket] confirmed subscription:', {
-      ...parsedData,
-      needs_baggage: needsBaggage,
-    })
+  const handleConfirm = async () => {
+    if (!parsedData) return
+    await dispatch(createSubscriptionApi({
+      source_url: parsedData.source_url,
+      origin_iata: parsedData.origin_iata ?? '',
+      destination_iata: parsedData.destination_iata ?? '',
+      departure_date: parsedData.departure_date ?? '',
+      departure_time: parsedData.departure_time ?? null,
+      flight_number: parsedData.flight_number ?? null,
+      airline: parsedData.airline ?? parsedData.airline_iata ?? null,
+      airline_domain: null,
+      baggage_info: needsBaggage ? 'with_baggage' : 'no_baggage',
+    }))
+    handleClose()
   }
 
   const handleBack = () => {

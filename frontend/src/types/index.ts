@@ -13,10 +13,9 @@ export interface Subscription {
   isActive: boolean
   checkFrequency: number
   lastCheckedAt: string | null
-  // mock fields (заменятся реальными данными в FE-07)
-  mockScreenshotUrl?: string
   lastPrice: number | null
   currency: string
+  screenshotUrl?: string
 }
 
 export interface PriceHistory {
