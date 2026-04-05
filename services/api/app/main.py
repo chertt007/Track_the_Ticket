@@ -8,7 +8,7 @@ from app.config import settings
 from app.database import engine
 from app.logging_config import setup_logging, get_logger
 from app.middleware import RequestLoggingMiddleware
-from app.routers import subscriptions
+from app.routers import parse, subscriptions
 from app.tracing import setup_tracing
 
 logger = get_logger(__name__)
@@ -50,6 +50,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(parse.router)
 app.include_router(subscriptions.router)
 
 

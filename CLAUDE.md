@@ -64,11 +64,11 @@ src/components/
 - FastAPI + SQLAlchemy 2.0 async + Alembic + Pydantic v2
 - Deployed as Lambda Docker via Mangum
 
-### AI Agent (`/services/strategy-agent`)
-- OpenAI Agents SDK (`openai-agents`) + LiteLLM + OpenRouter
-- Default model: `google/gemini-2.0-flash`
-- 4-file pattern: `lambda_handler.py`, `agent.py`, `templates.py`, `observability.py`
-- LangFuse for LLM call tracing
+### Price-Checker Agent (`/services/price-checker`)
+- browser-use + langchain-openai + OpenRouter
+- Default model: `google/gemini-2.5-flash`
+- 3-file pattern: `lambda_handler.py`, `agent.py`, `requirements.txt`
+- Agent navigates airline website via vision, finds price, takes screenshot
 
 ### Infrastructure
 - AWS: Lambda Docker, API Gateway HTTP v2, Cognito, RDS PostgreSQL, S3, SQS, EventBridge
@@ -79,23 +79,38 @@ src/components/
 
 ## Core Pipeline (order matters)
 
-1. **link-parser** — user pastes URL → Playwright intercepts tickets-api → returns structured
-   flight data `{ origin_iata, destination_iata, departure_date, flight_number, price, ... }`
-2. **strategy-agent** — receives parsed flight data → builds `strategy_json` (how to monitor prices)
-3. **First price check** — strategy is executed once to verify it works
-4. **Subscription created** — ONLY after a successful first price check. No subscription row is
-   written to the DB before this point. Parsing alone does NOT create a subscription.
-5. **Periodic price-checker** — runs on schedule, uses strategy to check prices → Telegram notification on change.
+1. User pastes Aviasales link → frontend calls `POST /parse` → gets structured flight data
+2. Frontend shows flight card + asks about baggage preference
+3. User confirms → `POST /subscriptions` with all flight data → subscription created immediately
+   with status `active`, expires_at = now + 14 days
+4. **price-checker Lambda** — EventBridge cron 08:00 / 16:00 / 21:00 Israel time (UTC+3) →
+   fetches all active subscriptions → iterates sequentially → for each runs browser-use agent
+   on the airline website → finds current price → takes screenshot
+5. Screenshot → S3 (`s3_key`), price + s3_key → `price_history`
+6. Always (every check, not only on change) → Telegram notification to user + data visible on frontend
+7. After 14 days → subscription auto-deactivated
+
+### Removed from pipeline
+- ~~strategy-agent~~ — removed entirely, no strategy_json needed
+- ~~link-parser Lambda~~ — removed, parsing is synchronous via `POST /parse`
+- ~~First price check before subscription~~ — subscription created immediately after user confirms
+
+### Price-checker service
+- Location: `/services/price-checker/`
+- Tech: browser-use + langchain-openai + OpenRouter (`google/gemini-2.5-flash`)
+- Entry: `lambda_handler.py` — processes all active subscriptions sequentially
+- Uses airline website URL derived from subscription's `airline_domain` field
 
 ---
 
 ## DB Schema
 - `users`: id, cognito_id, email, telegram_id
-- `search_strategies`: id, airline_name, airline_domain, strategy_json (JSONB), success_rate
-- `subscriptions`: id, user_id, strategy_id, flight_number, airline, origin_iata,
+- `subscriptions`: id, user_id, flight_number, airline, airline_domain, origin_iata,
   destination_iata, departure_date, departure_time, baggage_info, source_url,
-  is_active, check_frequency (DEFAULT 3), last_checked_at, last_notified_at
+  status, is_active, expires_at, check_frequency (DEFAULT 3), last_checked_at, last_notified_at
 - `price_history`: id, subscription_id, price, currency, s3_key, checked_at, status
+
+Note: `search_strategies` table is no longer used. `strategy_id` on subscriptions is nullable.
 
 ---
 
