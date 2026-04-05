@@ -1,30 +1,38 @@
 """
 Price checker — runs browser-use agent to find current flight price.
 Used both by the manual trigger endpoint and the scheduled Lambda.
+
+On Windows, uvicorn runs a SelectorEventLoop which cannot spawn subprocesses
+(required by Playwright). The agent is therefore run in a separate thread
+that creates its own ProactorEventLoop via asyncio.run().
 """
 
-import base64
+import asyncio
 import logging
-import os
-from dataclasses import dataclass, field
-
-from browser_use import Agent, Browser, BrowserConfig
-from langchain_openai import ChatOpenAI
+import sys
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
-OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 MODEL = "google/gemini-2.5-flash"
+
+
+def _get_openrouter_key() -> str:
+    """Read OPENROUTER_API_KEY from app settings (populated from .env)."""
+    from app.config import settings
+    return settings.openrouter_api_key
 
 
 @dataclass
 class PriceResult:
     price: float
     currency: str
-    flight_number: str
+    flight_number: str | None
     screenshot_b64: str | None = None
     raw_output: str = ""
 
+
+# ── Task builder ──────────────────────────────────────────────────────────────
 
 def _build_task(
     airline_domain: str,
@@ -39,13 +47,13 @@ def _build_task(
         if with_baggage
         else "without checked baggage (hand luggage only)"
     )
+    flight_hint = f"flight {flight_number}" if flight_number else "the cheapest available flight"
     return (
         f"Go to https://{airline_domain} and find the price for a one-way flight.\n"
         f"- Origin: type only IATA code '{origin_iata}' into the origin field and select the suggestion.\n"
         f"- Destination: type only IATA code '{destination_iata}' into the destination field and select the suggestion.\n"
         f"- Departure date: {departure_date}\n"
         f"- Passengers: 1 adult, {baggage_note}\n"
-        f"- Target flight: {flight_number}\n"
         "\n"
         "Steps:\n"
         "1. Open the website.\n"
@@ -54,7 +62,7 @@ def _build_task(
         "4. Type only the IATA code into destination and select the suggestion.\n"
         f"5. Set departure date to {departure_date}.\n"
         "6. Click search and wait for results to load.\n"
-        f"7. Find flight {flight_number} or the cheapest available.\n"
+        f"7. Find {flight_hint}.\n"
         "8. Return the result in EXACTLY this format:\n"
         "   PRICE: <number> <currency>\n"
         "   FLIGHT: <flight number>\n"
@@ -62,31 +70,31 @@ def _build_task(
     )
 
 
-async def run_price_check(
-    airline_domain: str,
-    origin_iata: str,
-    destination_iata: str,
-    departure_date: str,
-    flight_number: str,
-    with_baggage: bool = False,
-) -> PriceResult:
+# ── Agent runner (async, runs inside its own thread's event loop) ─────────────
+
+async def _run_agent_async(task: str) -> tuple[str, str | None]:
+    """
+    Runs the browser-use agent and returns (raw_text_result, screenshot_b64).
+    Must be called from a thread that owns a fresh ProactorEventLoop (Windows)
+    or any loop (Linux/macOS). Do NOT call from the uvicorn event loop directly.
+    """
+    from browser_use import Agent, Browser, BrowserConfig
+    from langchain_openai import ChatOpenAI
+
+    api_key = _get_openrouter_key()
+    if not api_key:
+        raise RuntimeError(
+            "OPENROUTER_API_KEY is not set. "
+            "Add it to services/api/.env and restart the server."
+        )
+
     llm = ChatOpenAI(
         model=MODEL,
-        openai_api_key=OPENROUTER_API_KEY,
+        openai_api_key=api_key,
         openai_api_base="https://openrouter.ai/api/v1",
     )
 
-    task = _build_task(
-        airline_domain=airline_domain,
-        origin_iata=origin_iata,
-        destination_iata=destination_iata,
-        departure_date=departure_date,
-        flight_number=flight_number,
-        with_baggage=with_baggage,
-    )
-
     browser = Browser(config=BrowserConfig(keep_alive=True))
-
     agent = Agent(
         task=task,
         llm=llm,
@@ -97,32 +105,82 @@ async def run_price_check(
 
     history = await agent.run()
 
-    # Extract text result
-    raw = ""
-    for result in history.all_results:
-        if result.is_done and result.extracted_content:
-            raw = result.extracted_content
-            break
+    # browser-use 0.1.x: final_result() returns the last extracted_content or None
+    raw = history.final_result() or ""
 
-    # Capture screenshot of the final page
-    screenshot_b64 = None
+    screenshot_b64: str | None = None
     try:
         screenshot_b64 = await agent.browser_context.take_screenshot()
-    except Exception as e:
-        logger.warning(f"screenshot capture failed: {e}")
+    except Exception as exc:
+        logger.warning(f"screenshot capture failed: {exc}")
 
     try:
         await browser.close()
     except Exception:
         pass
 
+    return raw, screenshot_b64
+
+
+def _run_agent_in_thread(task: str) -> tuple[str, str | None]:
+    """
+    Synchronous wrapper executed in a background thread.
+    Creates a fresh event loop — on Windows this is ProactorEventLoop,
+    which supports asyncio.create_subprocess_exec (required by Playwright).
+    """
+    if sys.platform == "win32":
+        # Must set policy before creating the loop so asyncio.run() uses Proactor
+        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+    return asyncio.run(_run_agent_async(task))
+
+
+# ── Public entry point ────────────────────────────────────────────────────────
+
+async def run_price_check(
+    airline_domain: str,
+    origin_iata: str,
+    destination_iata: str,
+    departure_date: str,
+    flight_number: str,
+    with_baggage: bool = False,
+) -> PriceResult:
+    """
+    Runs the price-check agent and returns a PriceResult.
+    Safe to await from any async context (FastAPI, Lambda, tests).
+    The heavy browser work runs in a separate thread with its own event loop.
+    """
+    task = _build_task(
+        airline_domain=airline_domain,
+        origin_iata=origin_iata,
+        destination_iata=destination_iata,
+        departure_date=departure_date,
+        flight_number=flight_number,
+        with_baggage=with_baggage,
+    )
+
+    logger.info(
+        "price_checker: starting agent",
+        extra={
+            "airline_domain": airline_domain,
+            "route": f"{origin_iata}->{destination_iata}",
+            "date": departure_date,
+        },
+    )
+
+    # Run in a separate thread so Playwright gets a fresh ProactorEventLoop on Windows
+    raw, screenshot_b64 = await asyncio.to_thread(_run_agent_in_thread, task)
+
+    logger.info(f"price_checker: agent raw output: {raw!r}")
+
     return _parse_result(raw, flight_number, screenshot_b64)
 
+
+# ── Result parser ─────────────────────────────────────────────────────────────
 
 def _parse_result(raw: str, fallback_flight: str, screenshot_b64: str | None) -> PriceResult:
     price = 0.0
     currency = "RUB"
-    flight = fallback_flight
+    flight = fallback_flight or None
 
     for line in raw.splitlines():
         line = line.strip()
@@ -130,13 +188,21 @@ def _parse_result(raw: str, fallback_flight: str, screenshot_b64: str | None) ->
             parts = line.replace("PRICE:", "").strip().split()
             if parts:
                 try:
-                    price = float(parts[0].replace(",", "").replace("\xa0", "").replace(" ", ""))
+                    price = float(
+                        parts[0]
+                        .replace(",", "")
+                        .replace("\xa0", "")
+                        .replace("\u202f", "")
+                        .replace(" ", "")
+                    )
                 except ValueError:
                     pass
             if len(parts) > 1:
-                currency = parts[1]
+                currency = parts[1].upper()
         elif line.startswith("FLIGHT:"):
-            flight = line.replace("FLIGHT:", "").strip() or fallback_flight
+            value = line.replace("FLIGHT:", "").strip()
+            if value:
+                flight = value
 
     return PriceResult(
         price=price,

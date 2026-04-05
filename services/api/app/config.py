@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     cognito_user_pool_id: str
     cognito_region: str = "us-east-1"
 
+    # AI / OpenRouter
+    openrouter_api_key: str = ""
+
     # App
     environment: str = "prod"
 

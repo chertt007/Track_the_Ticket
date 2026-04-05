@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -118,7 +118,7 @@ async def create_subscription(
         baggage_info=body.baggage_info,
         check_frequency=body.check_frequency,
         status="active",
-        expires_at=datetime.now(timezone.utc) + timedelta(days=SUBSCRIPTION_LIFETIME_DAYS),
+        expires_at=datetime.utcnow() + timedelta(days=SUBSCRIPTION_LIFETIME_DAYS),
     )
     db.add(subscription)
     await db.commit()
@@ -307,7 +307,7 @@ async def check_subscription_price(
         with_baggage=with_baggage,
     )
 
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
 
     # Save to price_history
     record = PriceHistory(
