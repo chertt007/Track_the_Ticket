@@ -16,6 +16,7 @@ export const translations = {
 
     // SubscriptionCard
     flight: 'Рейс',
+    airline: 'Авиакомпания',
     departure: 'Вылет',
     baggage: 'Багаж',
     active: 'Активна',
@@ -24,6 +25,8 @@ export const translations = {
     never: 'Не проверялась',
     checkNow: 'Проверить сейчас',
     checking: 'Проверяем...',
+    deleteSubscription: 'Удалить подписку',
+    deleteConfirm: 'Удалить эту подписку? Это действие необратимо.',
     lastPrice: 'Последняя цена',
 
     // AddSubscriptionModal
@@ -146,6 +149,7 @@ export const translations = {
 
     // SubscriptionCard
     flight: 'Flight',
+    airline: 'Airline',
     departure: 'Departure',
     baggage: 'Baggage',
     active: 'Active',
@@ -154,6 +158,8 @@ export const translations = {
     never: 'Never',
     checkNow: 'Check now',
     checking: 'Checking...',
+    deleteSubscription: 'Delete subscription',
+    deleteConfirm: 'Delete this subscription? This action cannot be undone.',
     lastPrice: 'Last price',
 
     // AddSubscriptionModal

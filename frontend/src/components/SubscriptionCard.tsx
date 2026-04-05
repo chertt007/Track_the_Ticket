@@ -6,6 +6,7 @@ import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
 import CircularProgress from '@mui/material/CircularProgress'
 import SyncIcon from '@mui/icons-material/Sync'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff'
 import FlightLandIcon from '@mui/icons-material/FlightLand'
 import LuggageIcon from '@mui/icons-material/Luggage'
@@ -13,7 +14,7 @@ import { useNavigate } from 'react-router-dom'
 import { useT } from '../hooks/useT'
 import { useLocale } from '../hooks/useLocale'
 import { useAppDispatch, useAppSelector } from '../hooks'
-import { setCheckingId, checkSubscriptionApi } from '../store/slices/subscriptionsSlice'
+import { setCheckingId, checkSubscriptionApi, deleteSubscriptionApi } from '../store/slices/subscriptionsSlice'
 import ScreenshotPreview from './ScreenshotPreview'
 import { cardStyles as s } from './SubscriptionCard.styles'
 import type { Subscription } from '../types'
@@ -34,6 +35,13 @@ export default function SubscriptionCard({ subscription: sub }: Props) {
     e.stopPropagation()
     dispatch(setCheckingId(sub.id))
     dispatch(checkSubscriptionApi(sub.id))
+  }
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (window.confirm(t('deleteConfirm'))) {
+      dispatch(deleteSubscriptionApi(sub.id))
+    }
   }
 
   const formattedDate = sub.departureDate !== '—'
@@ -66,8 +74,8 @@ export default function SubscriptionCard({ subscription: sub }: Props) {
 
         <Box sx={s.detailsRow}>
           <Box>
-            <Typography variant="caption" color="text.secondary">{t('flight')}</Typography>
-            <Typography variant="body2" fontWeight={600}>{sub.flightNumber} · {sub.airline}</Typography>
+            <Typography variant="caption" color="text.secondary">{t('airline')}</Typography>
+            <Typography variant="body2" fontWeight={600}>{sub.airline}</Typography>
           </Box>
           <Box>
             <Typography variant="caption" color="text.secondary">{t('departure')}</Typography>
@@ -95,7 +103,7 @@ export default function SubscriptionCard({ subscription: sub }: Props) {
         />
       </Box>
 
-      {/* ── Check button ──────────────────────────────────────────────────── */}
+      {/* ── Actions ──────────────────────────────────────────────────────── */}
       <Box sx={s.actionBox}>
         <Tooltip title={isChecking ? t('checking') : t('checkNow')}>
           <span>
@@ -105,6 +113,11 @@ export default function SubscriptionCard({ subscription: sub }: Props) {
                 : <SyncIcon />}
             </IconButton>
           </span>
+        </Tooltip>
+        <Tooltip title={t('deleteSubscription')}>
+          <IconButton onClick={handleDelete} size="small" sx={s.deleteButton}>
+            <DeleteOutlineIcon fontSize="small" />
+          </IconButton>
         </Tooltip>
       </Box>
     </Card>

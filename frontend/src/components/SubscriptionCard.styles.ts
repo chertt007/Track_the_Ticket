@@ -54,12 +54,6 @@ export const cardStyles = {
     flexShrink: 0,
   } as SxProps<Theme>,
 
-  actionBox: {
-    display: 'flex',
-    alignItems: 'center',
-    flexShrink: 0,
-  } as SxProps<Theme>,
-
   checkButton: {
     color: berryPalette.raspberry,
     background: alpha(berryPalette.rose, 0.15),
@@ -69,6 +63,23 @@ export const cardStyles = {
       background: alpha(berryPalette.raspberry, 0.12),
       transform: 'rotate(180deg)',
     },
+  } as SxProps<Theme>,
+
+  deleteButton: {
+    color: alpha(berryPalette.raspberry, 0.45),
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      color: berryPalette.raspberry,
+      background: alpha(berryPalette.raspberry, 0.08),
+    },
+  } as SxProps<Theme>,
+
+  actionBox: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 0.5,
+    flexShrink: 0,
   } as SxProps<Theme>,
 
   chip: {
