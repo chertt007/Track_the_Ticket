@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     # AI / OpenRouter
     openrouter_api_key: str = ""
+    price_checker_model: str = "google/gemini-2.5-flash"
 
     # App
     environment: str = "prod"

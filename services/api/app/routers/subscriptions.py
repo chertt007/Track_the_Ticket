@@ -18,51 +18,6 @@ from app.schemas.subscription import SubscriptionCreate, SubscriptionOut
 
 SUBSCRIPTION_LIFETIME_DAYS = 14
 
-# Mapping from airline IATA code to the domain used for price checking.
-# The price-checker agent navigates to this domain to find current prices.
-AIRLINE_DOMAIN_MAP: dict[str, str] = {
-    "SU": "aeroflot.ru",
-    "S7": "s7.ru",
-    "U6": "uralairlines.ru",
-    "DP": "pobeda.aero",
-    "FV": "rossiya-airlines.com",
-    "N4": "nordwindairlines.ru",
-    "TK": "turkishairlines.com",
-    "PC": "flypgs.com",
-    "LH": "lufthansa.com",
-    "BA": "britishairways.com",
-    "EK": "emirates.com",
-    "QR": "qatarairways.com",
-    "SQ": "singaporeair.com",
-    "AF": "airfrance.com",
-    "KL": "klm.com",
-    "W6": "wizzair.com",
-    "FR": "ryanair.com",
-    "U2": "easyjet.com",
-    "KC": "airastana.com",
-    "HY": "uzairways.com",
-    "B2": "belavia.by",
-    "EY": "etihad.com",
-}
-
-# Reverse mapping: airline full name (lowercase) → domain.
-# Used as a fallback when airline_iata is not stored on the subscription.
-AIRLINE_NAME_DOMAIN_MAP: dict[str, str] = {
-    name.lower(): domain
-    for iata, domain in AIRLINE_DOMAIN_MAP.items()
-    for name in [
-        {"SU": "aeroflot", "S7": "s7 airlines", "U6": "ural airlines",
-         "DP": "pobeda", "FV": "rossiya airlines", "N4": "nordwind airlines",
-         "TK": "turkish airlines", "PC": "pegasus airlines", "LH": "lufthansa",
-         "BA": "british airways", "EK": "emirates", "QR": "qatar airways",
-         "SQ": "singapore airlines", "AF": "air france", "KL": "klm",
-         "W6": "wizz air", "FR": "ryanair", "U2": "easyjet",
-         "KC": "air astana", "HY": "uzbekistan airways", "B2": "belavia",
-         "EY": "etihad airways"}.get(iata, "")
-    ]
-    if name
-}
-
 
 class CheckResult(BaseModel):
     price: float
@@ -257,49 +212,40 @@ async def check_subscription_price(
 
     sub = await _get_own_subscription(subscription_id, current_user, db)
 
-    # Resolve airline domain: stored → IATA map → name map
-    airline_domain = sub.airline_domain
-    if not airline_domain and sub.airline_iata:
-        airline_domain = AIRLINE_DOMAIN_MAP.get(sub.airline_iata.upper())
-        if airline_domain:
-            logger.info(
-                "airline_domain resolved from IATA mapping",
-                extra={"airline_iata": sub.airline_iata, "airline_domain": airline_domain},
-            )
-    if not airline_domain and sub.airline:
-        airline_domain = AIRLINE_NAME_DOMAIN_MAP.get(sub.airline.lower())
-        if airline_domain:
-            logger.info(
-                "airline_domain resolved from name mapping",
-                extra={"airline": sub.airline, "airline_domain": airline_domain},
-            )
-
-    if not airline_domain:
-        logger.error(
-            "cannot run price check: airline_domain unknown",
-            extra={
-                "subscription_id": subscription_id,
-                "airline_iata": sub.airline_iata,
-                "airline": sub.airline,
-            },
-        )
+    if not sub.airline:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=(
-                f"Cannot determine airline website for '{sub.airline}' ({sub.airline_iata}). "
-                "Please contact support."
-            ),
+            detail="Subscription is missing airline name — cannot run price check.",
         )
 
-    logger.info(
-        "manual price check started",
-        extra={"subscription_id": subscription_id, "user_id": current_user.id},
-    )
+    # If airline_domain was cached from a previous successful check, log it
+    if sub.airline_domain:
+        logger.info(
+            "manual price check started (cached domain)",
+            extra={
+                "subscription_id": subscription_id,
+                "user_id": current_user.id,
+                "airline": sub.airline,
+                "airline_domain": sub.airline_domain,
+            },
+        )
+    else:
+        logger.info(
+            "manual price check started (agent will discover domain)",
+            extra={
+                "subscription_id": subscription_id,
+                "user_id": current_user.id,
+                "airline": sub.airline,
+                "airline_iata": sub.airline_iata,
+            },
+        )
 
     with_baggage = sub.baggage_info not in (None, "", "no_baggage")
 
+    from app.price_checker import run_price_check, _is_agent_failure
     result = await run_price_check(
-        airline_domain=airline_domain,
+        airline_name=sub.airline,
+        airline_iata=sub.airline_iata or "",
         origin_iata=sub.origin_iata,
         destination_iata=sub.destination_iata,
         departure_date=str(sub.departure_date),
@@ -310,13 +256,24 @@ async def check_subscription_price(
     now = datetime.utcnow()
 
     # Determine record status
-    from app.price_checker import _is_agent_failure
     if result.price > 0:
         check_status = "ok"
     elif _is_agent_failure(result.raw_output):
         check_status = "agent_error"
     else:
         check_status = "no_price"
+
+    # Cache the discovered domain on the subscription so future checks skip discovery
+    if result.domain_used and not sub.airline_domain:
+        sub.airline_domain = result.domain_used
+        logger.info(
+            "airline_domain cached from agent",
+            extra={
+                "subscription_id": subscription_id,
+                "airline": sub.airline,
+                "domain_cached": result.domain_used,
+            },
+        )
 
     # Save to price_history (s3_key populated by Lambda; None for manual checks)
     record = PriceHistory(
@@ -339,6 +296,8 @@ async def check_subscription_price(
             "subscription_id": subscription_id,
             "price": result.price,
             "currency": result.currency,
+            "check_status": check_status,
+            "domain_used": result.domain_used,
         },
     )
 
