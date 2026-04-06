@@ -134,6 +134,20 @@ def _run_agent_in_thread(task: str) -> tuple[str, str | None]:
     return asyncio.run(_run_agent_async(task))
 
 
+# ── Retry config ──────────────────────────────────────────────────────────────
+
+# Returned by browser-use when the LLM produces no parseable action.
+_AGENT_FAILURE_MARKER = "No next action returned by LLM!"
+
+MAX_ATTEMPTS = 3          # 1 initial run + 2 retries
+RETRY_DELAY_SECONDS = 5   # pause between attempts
+
+
+def _is_agent_failure(raw: str) -> bool:
+    """Return True if the agent produced no usable output."""
+    return not raw or raw.strip() == _AGENT_FAILURE_MARKER
+
+
 # ── Public entry point ────────────────────────────────────────────────────────
 
 async def run_price_check(
@@ -146,9 +160,11 @@ async def run_price_check(
 ) -> PriceResult:
     """
     Runs the price-check agent and returns a PriceResult.
+    Retries up to MAX_ATTEMPTS times if the LLM returns no action.
     Safe to await from any async context (FastAPI, Lambda, tests).
     The heavy browser work runs in a separate thread with its own event loop.
     """
+    route = f"{origin_iata}->{destination_iata}"
     task = _build_task(
         airline_domain=airline_domain,
         origin_iata=origin_iata,
@@ -158,19 +174,54 @@ async def run_price_check(
         with_baggage=with_baggage,
     )
 
-    logger.info(
-        "price_checker: starting agent",
-        extra={
-            "airline_domain": airline_domain,
-            "route": f"{origin_iata}->{destination_iata}",
-            "date": departure_date,
-        },
-    )
+    raw: str = ""
+    screenshot_b64: str | None = None
 
-    # Run in a separate thread so Playwright gets a fresh ProactorEventLoop on Windows
-    raw, screenshot_b64 = await asyncio.to_thread(_run_agent_in_thread, task)
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        if attempt == 1:
+            logger.info(
+                "price_checker: starting agent",
+                extra={"airline_domain": airline_domain, "route": route, "date": departure_date},
+            )
+        else:
+            logger.warning(
+                "price_checker: retrying agent after failure",
+                extra={
+                    "attempt": attempt,
+                    "max_attempts": MAX_ATTEMPTS,
+                    "airline_domain": airline_domain,
+                    "route": route,
+                    "date": departure_date,
+                    "previous_raw": raw,
+                },
+            )
+            await asyncio.sleep(RETRY_DELAY_SECONDS)
 
-    logger.info(f"price_checker: agent raw output: {raw!r}")
+        # Run in a separate thread so Playwright gets a fresh ProactorEventLoop on Windows
+        raw, screenshot_b64 = await asyncio.to_thread(_run_agent_in_thread, task)
+
+        logger.info(
+            "price_checker: agent raw output",
+            extra={"attempt": attempt, "raw": raw, "route": route},
+        )
+
+        if not _is_agent_failure(raw):
+            # Agent produced a result — proceed
+            break
+
+        # Log the failure to CloudWatch with enough context to query later
+        logger.error(
+            "price_checker: agent returned no action",
+            extra={
+                "attempt": attempt,
+                "max_attempts": MAX_ATTEMPTS,
+                "airline_domain": airline_domain,
+                "route": route,
+                "date": departure_date,
+                "raw": raw,
+                "will_retry": attempt < MAX_ATTEMPTS,
+            },
+        )
 
     return _parse_result(raw, flight_number, screenshot_b64)
 

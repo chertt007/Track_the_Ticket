@@ -309,13 +309,22 @@ async def check_subscription_price(
 
     now = datetime.utcnow()
 
-    # Save to price_history
+    # Determine record status
+    from app.price_checker import _is_agent_failure
+    if result.price > 0:
+        check_status = "ok"
+    elif _is_agent_failure(result.raw_output):
+        check_status = "agent_error"
+    else:
+        check_status = "no_price"
+
+    # Save to price_history (s3_key populated by Lambda; None for manual checks)
     record = PriceHistory(
         subscription_id=sub.id,
         price=Decimal(str(result.price)),
         currency=result.currency,
-        s3_key=None,          # S3 upload handled separately in Lambda
-        status="ok" if result.price > 0 else "no_price",
+        s3_key=None,
+        status=check_status,
         checked_at=now,
     )
     db.add(record)
