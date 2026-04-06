@@ -70,7 +70,9 @@ def _upload_screenshot(screenshot_b64: str, subscription_id: int, timestamp: str
 
 async def _process_subscription(subscription_id: int) -> None:
     """Read subscription, run price check, write result to DB."""
+    logger.info(f"processing subscription_id={subscription_id}")
     conn = await _get_db_conn()
+    logger.info(f"db connected for subscription_id={subscription_id}")
     try:
         # Read subscription
         row = await conn.fetchrow(

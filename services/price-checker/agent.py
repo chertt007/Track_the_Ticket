@@ -121,14 +121,27 @@ async def _run_agent_async(task: str) -> tuple[str, str | None, str | None]:
     api_key = _get_openrouter_key()
     model   = _get_model()
 
+    logger.info(f"agent: initializing LLM model={model}")
+
     llm = ChatOpenAI(
         model=model,
         openai_api_key=api_key,
         openai_api_base="https://openrouter.ai/api/v1",
     )
 
-    # headless=True is required in Lambda (no display server)
-    browser = Browser(config=BrowserConfig(headless=True, keep_alive=False))
+    logger.info("agent: launching browser (headless=True)")
+    # headless=True is required in Lambda (no display server).
+    # --disable-setuid-sandbox and --no-zygote are required in Lambda:
+    # Lambda's seccomp profile blocks the kernel calls Chrome uses for its
+    # Zygote subprocess and setuid sandbox, causing an immediate crash without them.
+    browser = Browser(config=BrowserConfig(
+        headless=True,
+        keep_alive=False,
+        extra_chromium_args=[
+            "--disable-setuid-sandbox",
+            "--no-zygote",
+        ],
+    ))
     agent = Agent(
         task=task,
         llm=llm,
@@ -137,12 +150,22 @@ async def _run_agent_async(task: str) -> tuple[str, str | None, str | None]:
         enable_memory=False,
     )
 
+    logger.info("agent: starting agent.run(max_steps=50)")
     history = await agent.run(max_steps=50)
     raw = history.final_result() or ""
+    logger.info(
+        "agent: run() completed",
+        extra={
+            "raw_length": len(raw),
+            "raw_preview": raw[:300] if raw else "<empty>",
+            "steps_taken": len(history.history) if hasattr(history, "history") else "unknown",
+        },
+    )
 
     screenshot_b64: str | None = None
     try:
         screenshot_b64 = await agent.browser_context.take_screenshot()
+        logger.info(f"agent: screenshot captured ({len(screenshot_b64)} chars b64)")
     except Exception as exc:
         logger.warning(f"screenshot capture failed: {exc}")
 
@@ -153,11 +176,13 @@ async def _run_agent_async(task: str) -> tuple[str, str | None, str | None]:
         parsed = urlparse(page.url)
         if parsed.hostname and parsed.hostname not in ("", "about:blank"):
             domain_used = parsed.hostname
+            logger.info(f"agent: final page domain = {domain_used}")
     except Exception as exc:
         logger.warning(f"domain extraction failed: {exc}")
 
     try:
         await browser.close()
+        logger.info("agent: browser closed")
     except Exception:
         pass
 
@@ -264,7 +289,15 @@ async def run_price_check(
             )
             await asyncio.sleep(RETRY_DELAY_SECS)
 
-        raw, screenshot_b64, domain_used = await _run_agent_async(task)
+        try:
+            raw, screenshot_b64, domain_used = await _run_agent_async(task)
+        except Exception as exc:
+            logger.error(
+                "price_checker: agent raised exception",
+                extra={"attempt": attempt, "error": str(exc), "route": route},
+                exc_info=True,
+            )
+            raw = ""
 
         logger.info(
             "price_checker: agent raw output",
