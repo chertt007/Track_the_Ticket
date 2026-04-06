@@ -10,6 +10,8 @@ with no FastAPI or API-specific imports.
 import asyncio
 import logging
 import os
+import subprocess
+import time
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -109,6 +111,28 @@ def _build_task(
 
 # ── Agent runner ───────────────────────────────────────────────────────────────
 
+def _ensure_display() -> None:
+    """
+    Start Xvfb virtual display if DISPLAY is not set.
+    This makes Chrome behave exactly like on a local machine (headless=False),
+    avoiding headless-browser detection by airline websites.
+    """
+    if os.environ.get("DISPLAY"):
+        return
+    display = ":99"
+    try:
+        subprocess.Popen(
+            ["Xvfb", display, "-screen", "0", "1280x1024x24", "-ac"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        time.sleep(1)  # wait for Xvfb to initialize
+        os.environ["DISPLAY"] = display
+        logger.info(f"agent: Xvfb started on {display}")
+    except Exception as exc:
+        logger.warning(f"agent: failed to start Xvfb: {exc}")
+
+
 async def _run_agent_async(task: str) -> tuple[str, str | None, str | None]:
     """
     Runs the browser-use agent.
@@ -117,6 +141,8 @@ async def _run_agent_async(task: str) -> tuple[str, str | None, str | None]:
     """
     from browser_use import Agent, Browser, BrowserConfig
     from langchain_openai import ChatOpenAI
+
+    _ensure_display()
 
     api_key = _get_openrouter_key()
     model   = _get_model()
@@ -129,18 +155,13 @@ async def _run_agent_async(task: str) -> tuple[str, str | None, str | None]:
         openai_api_base="https://openrouter.ai/api/v1",
     )
 
-    logger.info("agent: launching browser (headless=True)")
-    # headless=True is required in Lambda (no display server).
-    # --disable-setuid-sandbox and --no-zygote are required in Lambda:
-    # Lambda's seccomp profile blocks the kernel calls Chrome uses for its
-    # Zygote subprocess and setuid sandbox, causing an immediate crash without them.
+    # headless=False — same as running locally.
+    # Xvfb provides a virtual display so Chrome doesn't know it's in Lambda.
+    # Airline websites detect headless browsers and show captchas — this avoids that.
+    logger.info("agent: launching browser (headless=False, display via Xvfb)")
     browser = Browser(config=BrowserConfig(
-        headless=True,
+        headless=False,
         keep_alive=False,
-        extra_chromium_args=[
-            "--disable-setuid-sandbox",
-            "--no-zygote",
-        ],
     ))
     agent = Agent(
         task=task,

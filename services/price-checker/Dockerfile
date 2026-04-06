@@ -28,6 +28,7 @@ RUN dnf install -y \
     libxkbcommon \
     nss \
     nspr \
+    xorg-x11-server-Xvfb \
     && dnf clean all
 
 COPY requirements.txt .
