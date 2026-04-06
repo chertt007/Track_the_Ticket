@@ -137,6 +137,10 @@ def setup_logging(environment: str = "local", log_level: str = "INFO") -> None:
     logging.getLogger("sqlalchemy.pool").setLevel(logging.WARNING)
     logging.getLogger("botocore").setLevel(logging.WARNING)
     logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
+    logging.getLogger("openai").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("browser_use").setLevel(logging.INFO)
 
 
 # ── Per-module logger helper ───────────────────────────────────────────────────

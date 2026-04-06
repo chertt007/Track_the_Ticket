@@ -56,6 +56,11 @@ def _build_task(
     flight_number: str,
     with_baggage: bool,
 ) -> str:
+    from datetime import datetime
+    dt = datetime.strptime(departure_date, "%Y-%m-%d")
+    departure_date_human = dt.strftime("%d %B %Y")   # e.g. "10 May 2026"
+    target_year_month   = dt.strftime("%Y-%m")        # e.g. "2026-05"  (for comparison)
+
     baggage_note = (
         "with 1 checked baggage bag included"
         if with_baggage
@@ -72,7 +77,7 @@ def _build_task(
         f"wait for the dropdown, then select the correct airport from the list.\n"
         f"- Destination: type first two letters of IATA code '{destination_iata}' into the destination field, "
         f"wait for the dropdown, then select the correct airport from the list.\n"
-        f"- Departure date: {departure_date}\n"
+        f"- Departure date: {departure_date_human} (ISO: {departure_date})\n"
         f"- Passengers: 1 adult, {baggage_note}\n"
         "\n"
         "Steps:\n"
@@ -82,8 +87,22 @@ def _build_task(
         f"select the airport matching IATA code {origin_iata}.\n"
         f"4. Type first two letters of '{destination_iata}' into the destination field, wait for dropdown, "
         f"select the airport matching IATA code {destination_iata}.\n"
-        f"5. Set departure date to {departure_date}.\n"
-        "6. Click search and wait for results to load.\n"
+        f"5. Set departure date to {departure_date_human}. When the datepicker opens:\n"
+        f"   a. Read the MONTH and YEAR shown in the calendar header (e.g. 'May 2026').\n"
+        f"   b. The target month is: {departure_date_human}. Convert it to YYYY-MM = {target_year_month}.\n"
+        f"      Convert the visible header month to YYYY-MM the same way and compare:\n"
+        f"      - If visible YYYY-MM > {target_year_month}: the calendar is TOO FAR AHEAD — click '<' or 'prev'.\n"
+        f"      - If visible YYYY-MM < {target_year_month}: the calendar is TOO FAR BACK — click '>' or 'next'.\n"
+        f"      - If visible YYYY-MM == {target_year_month}: the correct month is shown — click day {dt.day}.\n"
+        f"   c. After each navigation click, re-read the header and repeat step (b).\n"
+        f"   d. Do NOT click the date until the correct month AND year are visible in the header.\n"
+        f"   e. IMPORTANT: if after 15 navigation clicks you still cannot reach {departure_date_human}, "
+        f"stop immediately and call done with success=False.\n"
+        "6. Click the main SEARCH / FIND FLIGHTS button on the booking form "
+        "(it may be labeled 'Search', 'Find flights', 'Search flights', 'Book now', etc.). "
+        "Do NOT click on any advertisements, banners, promotional offers, or pop-ups — "
+        "focus only on the primary submit button of the search form. "
+        "After clicking, wait for the results page to load.\n"
         f"7. Find {flight_hint}.\n"
         "8. Return the result in EXACTLY this format:\n"
         "   PRICE: <number> <currency>\n"
@@ -128,7 +147,7 @@ async def _run_agent_async(task: str) -> tuple[str, str | None]:
         enable_memory=False,
     )
 
-    history = await agent.run()
+    history = await agent.run(max_steps=50)
 
     # browser-use 0.1.x: final_result() returns the last extracted_content or None
     raw = history.final_result() or ""
