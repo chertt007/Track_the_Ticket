@@ -1,6 +1,5 @@
 # Browser automation
 browser-use==0.1.48
-playwright==1.44.0
 langchain-openai>=0.3.0
 
 # Database (direct asyncpg — no ORM needed for simple read/write)
