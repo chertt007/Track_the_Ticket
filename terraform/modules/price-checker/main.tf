@@ -128,8 +128,8 @@ resource "aws_lambda_function" "price_checker" {
   package_type = "Image"
   image_uri    = "${aws_ecr_repository.price_checker.repository_url}:latest"
 
-  # browser-use + Playwright needs plenty of memory; 300s for the full agent run
-  memory_size = 1024
+  # headed Chrome + Xvfb uses more memory than headless; 2048MB to avoid OOM
+  memory_size = 2048
   timeout     = 300
 
   environment {

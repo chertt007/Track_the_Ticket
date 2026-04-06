@@ -54,4 +54,11 @@ RUN for f in /ms-playwright/chromium-*/chrome-linux64/chrome \
 
 COPY . .
 
+# Make entrypoint executable
+RUN chmod +x entrypoint.sh
+
+# Use xvfb-run to wrap the Lambda bootstrap so DISPLAY is set before Python starts.
+# Without this, Chrome errors: "Missing X server or $DISPLAY"
+# xvfb-run starts Xvfb, sets DISPLAY, then execs /lambda-entrypoint.sh (the Lambda bootstrap).
+ENTRYPOINT ["/var/task/entrypoint.sh"]
 CMD ["lambda_handler.handler"]
