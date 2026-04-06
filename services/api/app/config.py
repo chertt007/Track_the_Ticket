@@ -17,9 +17,14 @@ class Settings(BaseSettings):
     cognito_user_pool_id: str
     cognito_region: str = "us-east-1"
 
-    # AI / OpenRouter
+    # AI / OpenRouter (local dev only — in production the agent runs in price-checker Lambda)
     openrouter_api_key: str = ""
     price_checker_model: str = "google/gemini-2.5-flash"
+
+    # SQS queue URL for price-checker Lambda.
+    # When set, POST /check sends a message to SQS instead of running the agent inline.
+    # Leave empty in local dev to keep the synchronous (direct) mode.
+    price_checker_queue_url: str = ""
 
     # App
     environment: str = "prod"

@@ -90,13 +90,18 @@ resource "aws_iam_role_policy" "lambda_custom" {
     Version = "2012-10-17"
     Statement = [
       {
-        # S3: read and write screenshots bucket only.
-        # GetObject: generate presigned URLs and serve screenshots.
-        # PutObject: price-checker uploads screenshots here.
+        # S3: read screenshots for presigned URLs; write handled by price-checker Lambda now.
         Sid    = "S3Screenshots"
         Effect = "Allow"
         Action = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
         Resource = "${var.screenshots_bucket_arn}/*"
+      },
+      {
+        # SQS: send messages to the price-checker queue (manual check trigger).
+        Sid    = "SQSSend"
+        Effect = "Allow"
+        Action = ["sqs:SendMessage"]
+        Resource = var.price_checker_queue_arn
       },
       {
         # Secrets Manager: read DB credentials at startup.
@@ -162,15 +167,17 @@ resource "aws_lambda_function" "api" {
 
   environment {
     variables = {
-      ENVIRONMENT          = var.environment
-      DB_HOST              = var.db_endpoint
-      DB_PORT              = "5432"
-      DB_NAME              = var.db_name
-      DB_USERNAME          = var.db_username
-      DB_PASSWORD          = var.db_password
-      SCREENSHOTS_BUCKET   = var.screenshots_bucket_name
-      COGNITO_USER_POOL_ID = var.cognito_user_pool_id
-      COGNITO_REGION       = var.aws_region
+      ENVIRONMENT                = var.environment
+      DB_HOST                    = var.db_endpoint
+      DB_PORT                    = "5432"
+      DB_NAME                    = var.db_name
+      DB_USERNAME                = var.db_username
+      DB_PASSWORD                = var.db_password
+      SCREENSHOTS_BUCKET         = var.screenshots_bucket_name
+      COGNITO_USER_POOL_ID       = var.cognito_user_pool_id
+      COGNITO_REGION             = var.aws_region
+      # SQS queue URL: when set, POST /check dispatches to price-checker Lambda via SQS
+      PRICE_CHECKER_QUEUE_URL    = var.price_checker_queue_url
     }
   }
 

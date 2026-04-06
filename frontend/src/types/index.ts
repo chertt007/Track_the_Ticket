@@ -36,4 +36,13 @@ export interface User {
   telegramId: string | null
 }
 
+/** One screenshot entry as returned by GET /subscriptions/{id}/screenshots */
+export interface ScreenshotItem {
+  url: string
+  checkedAt: string   // ISO datetime string
+  price: number
+  currency: string
+  status: string
+}
+
 // TicketPreview will be added back once the backend Playwright parsing is wired up

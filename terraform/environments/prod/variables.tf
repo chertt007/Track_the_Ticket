@@ -36,3 +36,9 @@ variable "db_password" {
   sensitive   = true
 }
 
+variable "openrouter_api_key" {
+  description = "OpenRouter API key for price-checker Lambda (google/gemini-2.5-flash)"
+  type        = string
+  sensitive   = true
+}
+

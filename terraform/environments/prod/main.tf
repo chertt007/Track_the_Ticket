@@ -88,6 +88,23 @@ module "database" {
   rds_security_group_id = module.networking.rds_security_group_id
 }
 
+# ── Price-Checker: browser-use Lambda + SQS + EventBridge cron ───────────────
+
+module "price_checker" {
+  source      = "../../modules/price-checker"
+  environment = "prod"
+
+  db_endpoint = module.database.db_endpoint
+  db_name     = module.database.db_name
+  db_username = var.db_username
+  db_password = var.db_password
+
+  screenshots_bucket_name = module.frontend.screenshots_bucket_name
+  screenshots_bucket_arn  = module.frontend.screenshots_bucket_arn
+
+  openrouter_api_key = var.openrouter_api_key
+}
+
 # ── API: Lambda Docker + API Gateway HTTP v2 ──────────────────────────────────
 
 module "api" {
@@ -105,13 +122,8 @@ module "api" {
 
   screenshots_bucket_name = module.frontend.screenshots_bucket_name
   screenshots_bucket_arn  = module.frontend.screenshots_bucket_arn
+
+  # Wire up SQS so POST /check dispatches to price-checker Lambda instead of running inline
+  price_checker_queue_url = module.price_checker.queue_url
+  price_checker_queue_arn = module.price_checker.queue_arn
 }
-
-# ── Messaging: SQS + EventBridge cron (3x/day) ───────────────────────────────
-# Uncomment when TF-MESSAGING-01 is implemented
-
-# module "messaging" {
-#   source                   = "../../modules/messaging"
-#   environment              = "prod"
-#   price_checker_lambda_arn = module.api.lambda_function_arn
-# }

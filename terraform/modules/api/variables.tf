@@ -51,3 +51,15 @@ variable "aws_region" {
   type        = string
   default     = "us-east-1"
 }
+
+variable "price_checker_queue_url" {
+  description = "SQS queue URL for price-checker Lambda — passed to API Lambda as env var"
+  type        = string
+  default     = ""
+}
+
+variable "price_checker_queue_arn" {
+  description = "SQS queue ARN — added to API Lambda IAM policy for sqs:SendMessage"
+  type        = string
+  default     = ""
+}

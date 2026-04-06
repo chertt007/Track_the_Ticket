@@ -82,3 +82,20 @@ output "lambda_function_name" {
   description = "Lambda function name — add as LAMBDA_FUNCTION_NAME in GitHub Secrets"
   value       = module.api.lambda_function_name
 }
+
+# ── Price-Checker outputs ─────────────────────────────────────────────────────
+
+output "price_checker_ecr_url" {
+  description = "Price-checker ECR repository URL — used by deploy-price-checker CI/CD"
+  value       = module.price_checker.ecr_repository_url
+}
+
+output "price_checker_lambda_name" {
+  description = "Price-checker Lambda function name"
+  value       = module.price_checker.lambda_function_name
+}
+
+output "price_checker_queue_url" {
+  description = "SQS queue URL for price-checker — set as PRICE_CHECKER_QUEUE_URL in API Lambda"
+  value       = module.price_checker.queue_url
+}

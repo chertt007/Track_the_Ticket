@@ -12,3 +12,12 @@ class PriceHistoryOut(BaseModel):
     checked_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class ScreenshotOut(BaseModel):
+    """One screenshot entry returned to the frontend, with presigned S3 URL and metadata."""
+    url: str
+    checked_at: datetime
+    price: float
+    currency: str
+    status: str
