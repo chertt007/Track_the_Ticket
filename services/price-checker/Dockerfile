@@ -43,10 +43,13 @@ RUN playwright install chromium
 # and setuid sandbox, causing an immediate crash without these flags.
 # browser-use 0.1.48 BrowserConfig.extra_chromium_args does not reliably forward
 # flags to the actual Chrome process, so we patch the binary directly.
-RUN CHROME_BIN=$(find /ms-playwright -name "chrome" -type f | head -1) && \
-    mv "$CHROME_BIN" "${CHROME_BIN}.real" && \
-    printf '#!/bin/sh\nexec "%s.real" --disable-setuid-sandbox --no-zygote "$@"\n' "$CHROME_BIN" > "$CHROME_BIN" && \
-    chmod +x "$CHROME_BIN"
+RUN for f in /ms-playwright/chromium-*/chrome-linux64/chrome \
+             /ms-playwright/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell; do \
+        [ -f "$f" ] || continue; \
+        mv "$f" "${f}.real"; \
+        printf '#!/bin/sh\nexec "%s.real" --disable-setuid-sandbox --no-zygote "$@"\n' "$f" > "$f"; \
+        chmod +x "$f"; \
+    done
 
 COPY . .
 
