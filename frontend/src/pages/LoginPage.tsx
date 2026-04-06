@@ -346,7 +346,7 @@ export default function LoginPage() {
                 variant="contained" fullWidth size="large"
                 disabled={loading} onClick={handleConfirmSignUp} sx={s.submitButton}
               >
-                {loading ? t('signingIn') : t('confirmButton')}
+                {loading ? t('signingIn') : t('confirmEmailButton')}
               </Button>
             </Box>
             <Box sx={s.linksRow}>
