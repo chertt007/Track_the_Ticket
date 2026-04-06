@@ -132,10 +132,15 @@ async def _run_agent_async(task: str) -> tuple[str, str | None, str | None]:
     # headless=False — same as running locally.
     # Xvfb is started by entrypoint.sh (xvfb-run) before Lambda bootstrap,
     # so DISPLAY is already set when Python starts. No subprocess magic needed.
+    # --disable-gpu: GPU acceleration is unavailable in Xvfb; without this flag
+    # Chrome hangs when Playwright tries to capture a screenshot (rendering stall).
+    # --disable-dev-shm-usage: /dev/shm in Lambda is tiny (64MB); Chrome uses it
+    # for shared memory between renderer processes — overflow causes crashes.
     logger.info("agent: launching browser (headless=False, display via Xvfb entrypoint)")
     browser = Browser(config=BrowserConfig(
         headless=False,
         keep_alive=False,
+        extra_chromium_args=["--disable-gpu", "--disable-dev-shm-usage"],
     ))
     agent = Agent(
         task=task,
