@@ -151,6 +151,12 @@ resource "aws_lambda_function" "price_checker" {
     aws_ecr_repository.price_checker,
   ]
 
+  # image_uri is managed by the deploy-price-checker GitHub Actions workflow.
+  # Ignore changes here so Terraform doesn't revert to :latest after a real deploy.
+  lifecycle {
+    ignore_changes = [image_uri]
+  }
+
   tags = { Name = "tracktheticket-price-checker" }
 }
 

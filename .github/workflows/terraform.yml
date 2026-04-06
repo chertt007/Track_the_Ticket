@@ -87,6 +87,36 @@ jobs:
         if: steps.plan.outcome == 'failure'
         run: exit 1
 
+      # Push a placeholder image so Lambda can be created on first deploy.
+      # On subsequent deploys the real image is already in ECR — this is a no-op.
+      - name: Push placeholder image to ECR (first deploy only)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          REPO="tracktheticket-price-checker"
+          ECR_URL="${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/${REPO}"
+
+          # Ensure the repo exists (idempotent — already created by Terraform Plan or previous run)
+          aws ecr create-repository --repository-name "${REPO}" --region us-east-1 2>/dev/null || true
+
+          # Only push if the repo is empty (i.e. first deploy)
+          IMAGE_COUNT=$(aws ecr describe-images \
+            --repository-name "${REPO}" \
+            --region us-east-1 \
+            --query 'length(imageDetails)' \
+            --output text 2>/dev/null || echo "0")
+
+          if [ "${IMAGE_COUNT}" = "0" ] || [ "${IMAGE_COUNT}" = "None" ]; then
+            echo "ECR is empty — pushing placeholder so Lambda can be created..."
+            aws ecr get-login-password --region us-east-1 \
+              | docker login --username AWS --password-stdin "${ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com"
+            docker pull public.ecr.aws/lambda/python:3.12
+            docker tag public.ecr.aws/lambda/python:3.12 "${ECR_URL}:latest"
+            docker push "${ECR_URL}:latest"
+          else
+            echo "ECR already has ${IMAGE_COUNT} image(s) — skipping placeholder push"
+          fi
+
       # Apply only on direct push to main (not on PR)
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
