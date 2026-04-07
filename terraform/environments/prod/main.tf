@@ -103,6 +103,9 @@ module "price_checker" {
   screenshots_bucket_arn  = module.frontend.screenshots_bucket_arn
 
   openrouter_api_key = var.openrouter_api_key
+
+  langfuse_public_key = var.langfuse_public_key
+  langfuse_secret_key = var.langfuse_secret_key
 }
 
 # ── API: Lambda Docker + API Gateway HTTP v2 ──────────────────────────────────

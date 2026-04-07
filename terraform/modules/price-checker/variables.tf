@@ -41,3 +41,16 @@ variable "openrouter_api_key" {
   type        = string
   sensitive   = true
 }
+
+variable "langfuse_public_key" {
+  description = "Langfuse public key for LLM tracing"
+  type        = string
+  default     = ""
+}
+
+variable "langfuse_secret_key" {
+  description = "Langfuse secret key for LLM tracing"
+  type        = string
+  sensitive   = true
+  default     = ""
+}

@@ -140,8 +140,11 @@ resource "aws_lambda_function" "price_checker" {
       DB_USERNAME          = var.db_username
       DB_PASSWORD          = var.db_password
       SCREENSHOTS_BUCKET   = var.screenshots_bucket_name
-      OPENROUTER_API_KEY   = var.openrouter_api_key
-      PRICE_CHECKER_MODEL  = "google/gemini-2.5-flash"
+      OPENROUTER_API_KEY      = var.openrouter_api_key
+      PRICE_CHECKER_MODEL     = "google/gemini-2.5-flash"
+      LANGFUSE_PUBLIC_KEY     = var.langfuse_public_key
+      LANGFUSE_SECRET_KEY     = var.langfuse_secret_key
+      LANGFUSE_HOST           = "https://us.cloud.langfuse.com"
     }
   }
 
