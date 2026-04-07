@@ -104,6 +104,7 @@ async def _process_subscription(subscription_id: int) -> None:
             departure_date=str(row["departure_date"]),
             flight_number=row["flight_number"] or "",
             with_baggage=with_baggage,
+            airline_domain=row["airline_domain"] or None,
         )
 
         # Determine record status

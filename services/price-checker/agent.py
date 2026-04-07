@@ -41,6 +41,48 @@ def _get_model() -> str:
     return os.environ.get("PRICE_CHECKER_MODEL", "google/gemini-2.5-flash")
 
 
+# ── Known airline domains (IATA code → booking domain) ────────────────────────
+# Temporary fallback map so the agent opens the site directly without Google.
+# Will be replaced by a domain-lookup agent once confirmed this fixes reCAPTCHA.
+
+AIRLINE_DOMAIN_MAP: dict[str, str] = {
+    "UA": "www.united.com",
+    "AA": "www.aa.com",
+    "DL": "www.delta.com",
+    "BA": "www.britishairways.com",
+    "LH": "www.lufthansa.com",
+    "AF": "www.airfrance.com",
+    "KL": "www.klm.com",
+    "IB": "www.iberia.com",
+    "FR": "www.ryanair.com",
+    "U2": "www.easyjet.com",
+    "W6": "www.wizzair.com",
+    "SU": "www.aeroflot.ru",
+    "S7": "www.s7.ru",
+    "UT": "www.utair.ru",
+    "DP": "www.pobeda.aero",   # Pobeda
+    "NN": "www.nordwind.ru",
+    "5N": "www.smartavia.com",
+    "TK": "www.turkishairlines.com",
+    "PC": "www.pegasusairlines.com",
+    "EK": "www.emirates.com",
+    "FZ": "www.flydubai.com",
+    "SV": "www.saudiairlines.com",
+    "EY": "www.etihad.com",
+    "QR": "www.qatarairways.com",
+    "LY": "www.elal.com",
+    "IS": "www.arkia.com",
+    "6H": "www.israir.co.il",
+}
+
+
+def _resolve_domain(airline_iata: str, airline_domain: str | None) -> str | None:
+    """Return domain from DB value, or fallback to static map, or None."""
+    if airline_domain:
+        return airline_domain
+    return AIRLINE_DOMAIN_MAP.get(airline_iata.upper())
+
+
 # ── Task builder ───────────────────────────────────────────────────────────────
 
 def _build_task(
@@ -51,6 +93,7 @@ def _build_task(
     departure_date: str,
     flight_number: str,
     with_baggage: bool,
+    airline_domain: str | None = None,
 ) -> str:
     dt = datetime.strptime(departure_date, "%Y-%m-%d")
     departure_date_human = dt.strftime("%d %B %Y")   # e.g. "24 April 2026"
@@ -63,12 +106,26 @@ def _build_task(
     )
     flight_hint = f"flight {flight_number}" if flight_number else "the cheapest available flight"
 
+    resolved_domain = _resolve_domain(airline_iata, airline_domain)
+    if resolved_domain:
+        # Navigate directly — avoids Google reCAPTCHA triggered by bot traffic
+        open_instruction = (
+            f"Open the airline website directly by navigating to https://{resolved_domain} "
+            f"(this is the official booking site of {airline_name}).\n"
+            f"IMPORTANT: Do NOT use Google, Bing, or any search engine. "
+            f"Do NOT use Expedia, Kayak, Skyscanner, or any aggregator.\n"
+        )
+    else:
+        open_instruction = (
+            f"Go to the OFFICIAL website of {airline_name} (IATA code: {airline_iata}) "
+            f"and find the price for a one-way flight.\n"
+            f"IMPORTANT: Navigate directly to the airline's own booking website. "
+            f"Do NOT use Google, Bing, Expedia, Kayak, Skyscanner, or any other search engine or aggregator.\n"
+        )
+
     return (
-        f"Go to the OFFICIAL website of {airline_name} (IATA code: {airline_iata}) "
-        f"and find the price for a one-way flight.\n"
-        f"IMPORTANT: Navigate directly to the airline's own booking website. "
-        f"Do NOT use Google Flights, Expedia, Kayak, Skyscanner, or any other aggregator.\n"
-        f"\n"
+        open_instruction
+        + f"\n"
         f"- Origin: type first two letters of IATA code '{origin_iata}' into the origin field, "
         f"wait for the dropdown, then select the correct airport from the list.\n"
         f"- Destination: type first two letters of IATA code '{destination_iata}' into the destination field, "
@@ -123,24 +180,26 @@ async def _run_agent_async(task: str) -> tuple[str, str | None, str | None]:
 
     logger.info(f"agent: initializing LLM model={model}")
 
-    # Langfuse tracing — records every LLM call, tool use, and agent step.
-    # Callbacks must be passed directly to the LLM (not to Agent),
-    # because LangChain intercepts calls at the model level.
-    # If keys are not set, tracing is silently skipped (no crash).
-    callbacks = []
+    # Langfuse tracing — get the LangChain handler from the current @observe trace.
+    # langfuse_context.get_current_langchain_handler() links LLM calls to the parent
+    # trace created by @observe in run_price_check, so all steps appear in one tree.
+    # Falls back to no tracing if Langfuse is not configured.
+    langfuse_callbacks = []
     try:
         if os.environ.get("LANGFUSE_PUBLIC_KEY"):
-            from langfuse.langchain import CallbackHandler
-            callbacks = [CallbackHandler()]
-            logger.info("agent: Langfuse tracing enabled")
+            from langfuse.decorators import langfuse_context
+            handler = langfuse_context.get_current_langchain_handler()
+            if handler:
+                langfuse_callbacks = [handler]
+                logger.info("agent: Langfuse tracing linked to parent trace")
     except Exception as exc:
-        logger.warning(f"agent: Langfuse init failed (tracing disabled): {exc}")
+        logger.warning(f"agent: Langfuse handler failed (tracing disabled): {exc}")
 
     llm = ChatOpenAI(
         model=model,
         openai_api_key=api_key,
         openai_api_base="https://openrouter.ai/api/v1",
-        callbacks=callbacks if callbacks else None,
+        callbacks=langfuse_callbacks if langfuse_callbacks else None,
     )
 
     # headless=True — uses Chrome's built-in headless renderer (no Xvfb needed).
@@ -266,12 +325,31 @@ async def run_price_check(
     departure_date: str,
     flight_number: str,
     with_baggage: bool = False,
+    airline_domain: str | None = None,
 ) -> PriceResult:
     """
     Runs the browser-use agent and returns a PriceResult.
     Retries up to MAX_ATTEMPTS times on LLM failure.
     This is an async function — call it from asyncio.run().
     """
+    # Update Langfuse trace metadata (trace is created by @observe wrapper above).
+    try:
+        if os.environ.get("LANGFUSE_PUBLIC_KEY"):
+            from langfuse.decorators import langfuse_context
+            langfuse_context.update_current_trace(
+                name=f"{airline_name} {origin_iata}→{destination_iata} {departure_date}",
+                tags=["price-checker", airline_iata],
+                metadata={
+                    "airline": airline_name,
+                    "route": f"{origin_iata}->{destination_iata}",
+                    "date": departure_date,
+                    "flight": flight_number,
+                    "domain": airline_domain,
+                },
+            )
+    except Exception:
+        pass
+
     model = _get_model()
     route = f"{origin_iata}->{destination_iata}"
     task = _build_task(
@@ -282,6 +360,7 @@ async def run_price_check(
         departure_date=departure_date,
         flight_number=flight_number,
         with_baggage=with_baggage,
+        airline_domain=airline_domain,
     )
 
     raw: str = ""
@@ -325,3 +404,15 @@ async def run_price_check(
         )
 
     return _parse_result(raw, flight_number, screenshot_b64, domain_used)
+
+
+# ── Langfuse @observe wrapping ─────────────────────────────────────────────────
+# Applied after function definition so the env var is available at Lambda init time.
+# Wraps run_price_check so all LLM calls inside appear as children of one trace.
+try:
+    if os.environ.get("LANGFUSE_PUBLIC_KEY"):
+        from langfuse.decorators import observe
+        run_price_check = observe(name="price_check")(run_price_check)
+        logger.info("agent: Langfuse @observe applied to run_price_check")
+except Exception as _exc:
+    logger.warning(f"agent: could not apply Langfuse @observe: {_exc}")
