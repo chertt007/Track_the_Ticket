@@ -13,16 +13,43 @@ import os
 from dataclasses import dataclass
 from datetime import datetime
 
-try:
-    from langfuse.decorators import observe as langfuse_observe
-except ImportError:
-    # Langfuse not installed — use no-op decorator
-    def langfuse_observe(**_kw):  # type: ignore[misc]
-        def _wrap(fn):
-            return fn
-        return _wrap
-
 logger = logging.getLogger(__name__)
+
+
+def _make_langfuse_trace(
+    airline_name: str,
+    airline_iata: str,
+    origin_iata: str,
+    destination_iata: str,
+    departure_date: str,
+    flight_number: str,
+):
+    """
+    Creates an explicit Langfuse trace for one price check invocation.
+    Returns (trace, langchain_handler) or (None, None) if Langfuse is not configured.
+    Explicit trace creation is more reliable in Lambda than @observe decorators
+    because asyncio.run() breaks contextvars propagation across the sync/async boundary.
+    """
+    if not os.environ.get("LANGFUSE_PUBLIC_KEY"):
+        return None, None
+    try:
+        from langfuse import Langfuse
+        lf = Langfuse()
+        trace = lf.trace(
+            name=f"{airline_name} {origin_iata}→{destination_iata} {departure_date}",
+            tags=["price-checker", airline_iata],
+            metadata={
+                "airline": airline_name,
+                "route": f"{origin_iata}->{destination_iata}",
+                "date": departure_date,
+                "flight": flight_number,
+            },
+        )
+        handler = trace.get_langchain_handler()
+        return trace, handler
+    except Exception as exc:
+        logger.warning(f"agent: Langfuse init failed (tracing disabled): {exc}")
+        return None, None
 
 
 # ── Result dataclass ───────────────────────────────────────────────────────────
@@ -177,11 +204,14 @@ def _build_task(
 
 # ── Agent runner ───────────────────────────────────────────────────────────────
 
-async def _run_agent_async(task: str) -> tuple[str, str | None, str | None]:
+async def _run_agent_async(
+    task: str,
+    langfuse_handler=None,
+) -> tuple[str, str | None, str | None]:
     """
     Runs the browser-use agent.
     Returns (raw_text, screenshot_b64, domain_used).
-    Must be called from a fresh event loop (use asyncio.run()).
+    langfuse_handler: LangChain callback handler linked to an explicit Langfuse trace.
     """
     from browser_use import Agent, Browser, BrowserConfig
     from langchain_openai import ChatOpenAI
@@ -191,20 +221,9 @@ async def _run_agent_async(task: str) -> tuple[str, str | None, str | None]:
 
     logger.info(f"agent: initializing LLM model={model}")
 
-    # Langfuse tracing — get the LangChain handler from the current @observe trace.
-    # langfuse_context.get_current_langchain_handler() links LLM calls to the parent
-    # trace created by @observe in run_price_check, so all steps appear in one tree.
-    # Falls back to no tracing if Langfuse is not configured.
-    langfuse_callbacks = []
-    try:
-        if os.environ.get("LANGFUSE_PUBLIC_KEY"):
-            from langfuse.decorators import langfuse_context
-            handler = langfuse_context.get_current_langchain_handler()
-            if handler:
-                langfuse_callbacks = [handler]
-                logger.info("agent: Langfuse tracing linked to parent trace")
-    except Exception as exc:
-        logger.warning(f"agent: Langfuse handler failed (tracing disabled): {exc}")
+    langfuse_callbacks = [langfuse_handler] if langfuse_handler else []
+    if langfuse_callbacks:
+        logger.info("agent: Langfuse handler attached to LLM")
 
     llm = ChatOpenAI(
         model=model,
@@ -331,7 +350,6 @@ MAX_ATTEMPTS     = 3
 RETRY_DELAY_SECS = 5
 
 
-@langfuse_observe(name="price_check")
 async def run_price_check(
     airline_name: str,
     airline_iata: str,
@@ -347,23 +365,16 @@ async def run_price_check(
     Retries up to MAX_ATTEMPTS times on LLM failure.
     This is an async function — call it from asyncio.run().
     """
-    # Update Langfuse trace metadata (trace is created by @observe wrapper above).
-    try:
-        if os.environ.get("LANGFUSE_PUBLIC_KEY"):
-            from langfuse.decorators import langfuse_context
-            langfuse_context.update_current_trace(
-                name=f"{airline_name} {origin_iata}→{destination_iata} {departure_date}",
-                tags=["price-checker", airline_iata],
-                metadata={
-                    "airline": airline_name,
-                    "route": f"{origin_iata}->{destination_iata}",
-                    "date": departure_date,
-                    "flight": flight_number,
-                    "domain": airline_domain,
-                },
-            )
-    except Exception:
-        pass
+    # Create explicit Langfuse trace. Using explicit client is more reliable in Lambda
+    # than @observe decorators — asyncio.run() breaks contextvars propagation.
+    _lf_trace, _lf_handler = _make_langfuse_trace(
+        airline_name=airline_name,
+        airline_iata=airline_iata,
+        origin_iata=origin_iata,
+        destination_iata=destination_iata,
+        departure_date=departure_date,
+        flight_number=flight_number,
+    )
 
     model = _get_model()
     route = f"{origin_iata}->{destination_iata}"
@@ -396,7 +407,9 @@ async def run_price_check(
             await asyncio.sleep(RETRY_DELAY_SECS)
 
         try:
-            raw, screenshot_b64, domain_used = await _run_agent_async(task)
+            raw, screenshot_b64, domain_used = await _run_agent_async(
+                task, langfuse_handler=_lf_handler
+            )
         except Exception as exc:
             logger.error(
                 "price_checker: agent raised exception",

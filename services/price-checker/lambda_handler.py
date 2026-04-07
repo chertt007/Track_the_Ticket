@@ -223,4 +223,14 @@ def handler(event: dict, context: object) -> dict:
         logger.info("EventBridge trigger: running scheduled price check for all active subscriptions")
         asyncio.run(_process_all_active())
 
+    # Flush Langfuse buffer — Lambda may terminate before async HTTP requests complete.
+    # Must be called synchronously at the end of the handler.
+    try:
+        if os.environ.get("LANGFUSE_PUBLIC_KEY"):
+            from langfuse import Langfuse
+            Langfuse().flush()
+            logger.info("Langfuse flush completed")
+    except Exception as exc:
+        logger.warning(f"Langfuse flush failed: {exc}")
+
     return {"statusCode": 200}
