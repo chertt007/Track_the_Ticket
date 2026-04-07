@@ -13,6 +13,15 @@ import os
 from dataclasses import dataclass
 from datetime import datetime
 
+try:
+    from langfuse.decorators import observe as langfuse_observe
+except ImportError:
+    # Langfuse not installed — use no-op decorator
+    def langfuse_observe(**_kw):  # type: ignore[misc]
+        def _wrap(fn):
+            return fn
+        return _wrap
+
 logger = logging.getLogger(__name__)
 
 
@@ -108,12 +117,14 @@ def _build_task(
 
     resolved_domain = _resolve_domain(airline_iata, airline_domain)
     if resolved_domain:
-        # Navigate directly — avoids Google reCAPTCHA triggered by bot traffic
+        # Navigate directly — avoids Google reCAPTCHA triggered by bot traffic.
+        # Instruction is phrased as a mandatory FIRST action so the agent never
+        # falls back to a search engine before opening the URL.
         open_instruction = (
-            f"Open the airline website directly by navigating to https://{resolved_domain} "
-            f"(this is the official booking site of {airline_name}).\n"
-            f"IMPORTANT: Do NOT use Google, Bing, or any search engine. "
-            f"Do NOT use Expedia, Kayak, Skyscanner, or any aggregator.\n"
+            f"MANDATORY FIRST ACTION: use the navigate tool to open https://{resolved_domain} RIGHT NOW. "
+            f"Do NOT search Google, do NOT type anything into a search bar. "
+            f"Your very first browser action MUST be navigate(url='https://{resolved_domain}'). "
+            f"This is the official booking website of {airline_name} — it is already known, no lookup needed.\n"
         )
     else:
         open_instruction = (
@@ -221,8 +232,8 @@ async def _run_agent_async(task: str) -> tuple[str, str | None, str | None]:
         enable_memory=False,
     )
 
-    logger.info("agent: starting agent.run(max_steps=50)")
-    history = await agent.run(max_steps=50)
+    logger.info("agent: starting agent.run(max_steps=30)")
+    history = await agent.run(max_steps=30)
     raw = history.final_result() or ""
     logger.info(
         "agent: run() completed",
@@ -317,6 +328,7 @@ MAX_ATTEMPTS     = 3
 RETRY_DELAY_SECS = 5
 
 
+@langfuse_observe(name="price_check")
 async def run_price_check(
     airline_name: str,
     airline_iata: str,
@@ -406,13 +418,3 @@ async def run_price_check(
     return _parse_result(raw, flight_number, screenshot_b64, domain_used)
 
 
-# ── Langfuse @observe wrapping ─────────────────────────────────────────────────
-# Applied after function definition so the env var is available at Lambda init time.
-# Wraps run_price_check so all LLM calls inside appear as children of one trace.
-try:
-    if os.environ.get("LANGFUSE_PUBLIC_KEY"):
-        from langfuse.decorators import observe
-        run_price_check = observe(name="price_check")(run_price_check)
-        logger.info("agent: Langfuse @observe applied to run_price_check")
-except Exception as _exc:
-    logger.warning(f"agent: could not apply Langfuse @observe: {_exc}")
