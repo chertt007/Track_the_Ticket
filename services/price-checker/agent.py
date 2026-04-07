@@ -123,22 +123,25 @@ async def _run_agent_async(task: str) -> tuple[str, str | None, str | None]:
 
     logger.info(f"agent: initializing LLM model={model}")
 
-    llm = ChatOpenAI(
-        model=model,
-        openai_api_key=api_key,
-        openai_api_base="https://openrouter.ai/api/v1",
-    )
-
     # Langfuse tracing — records every LLM call, tool use, and agent step.
+    # Callbacks must be passed directly to the LLM (not to Agent),
+    # because LangChain intercepts calls at the model level.
     # If keys are not set, tracing is silently skipped (no crash).
     callbacks = []
     try:
         if os.environ.get("LANGFUSE_PUBLIC_KEY"):
-            from langfuse.callback import CallbackHandler
+            from langfuse.langchain import CallbackHandler
             callbacks = [CallbackHandler()]
             logger.info("agent: Langfuse tracing enabled")
     except Exception as exc:
         logger.warning(f"agent: Langfuse init failed (tracing disabled): {exc}")
+
+    llm = ChatOpenAI(
+        model=model,
+        openai_api_key=api_key,
+        openai_api_base="https://openrouter.ai/api/v1",
+        callbacks=callbacks if callbacks else None,
+    )
 
     # headless=False — same as running locally.
     # Xvfb is started by entrypoint.sh (xvfb-run) before Lambda bootstrap,
@@ -159,7 +162,6 @@ async def _run_agent_async(task: str) -> tuple[str, str | None, str | None]:
         browser=browser,
         use_vision=True,
         enable_memory=False,
-        llm_config={"callbacks": callbacks} if callbacks else {},
     )
 
     logger.info("agent: starting agent.run(max_steps=50)")
