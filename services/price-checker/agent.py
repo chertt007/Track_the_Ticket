@@ -222,7 +222,10 @@ async def _run_agent_async(task: str) -> tuple[str, str | None, str | None]:
     browser = Browser(config=BrowserConfig(
         headless=True,
         keep_alive=False,
-        extra_chromium_args=["--disable-dev-shm-usage"],
+        extra_chromium_args=[
+            "--disable-dev-shm-usage",
+            "--disable-http2",  # avoids ERR_HTTP2_PROTOCOL_ERROR on sites with strict HTTP/2
+        ],
     ))
     agent = Agent(
         task=task,
