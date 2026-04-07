@@ -28,7 +28,6 @@ RUN dnf install -y \
     libxkbcommon \
     nss \
     nspr \
-    xorg-x11-server-Xvfb \
     && dnf clean all
 
 COPY requirements.txt .
@@ -57,8 +56,6 @@ COPY . .
 # Make entrypoint executable
 RUN chmod +x entrypoint.sh
 
-# Use xvfb-run to wrap the Lambda bootstrap so DISPLAY is set before Python starts.
-# Without this, Chrome errors: "Missing X server or $DISPLAY"
-# xvfb-run starts Xvfb, sets DISPLAY, then execs /lambda-entrypoint.sh (the Lambda bootstrap).
+# headless=True mode — no Xvfb needed.
 ENTRYPOINT ["/var/task/entrypoint.sh"]
 CMD ["lambda_handler.handler"]
