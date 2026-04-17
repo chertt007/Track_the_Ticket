@@ -2,17 +2,17 @@
 Link-parser HTTP service.
 
 Endpoints:
-  POST /parse   — parse an Aviasales URL, return flight details
-  GET  /health  — liveness check
+  POST /parse                — parse an Aviasales URL, return flight details
+  GET  /health               — liveness check
+  POST /subscriptions        — save a subscription to the DB
+  GET  /subscriptions        — list subscriptions for a user
+  DELETE /subscriptions/{id} — delete a subscription
 """
 from __future__ import annotations
 
 import logging
 import sys
 
-# Configure logging before any other imports so all module loggers inherit this.
-# force=True overrides any handlers already set by uvicorn or third-party libs.
-# stream=sys.stdout ensures honcho picks up the output.
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
@@ -21,32 +21,60 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
+from database import engine, get_db
+from db_models import Base, Subscription
+from schemas import SubscriptionCreate, SubscriptionOut
 from flight_parser import fetch_parsed_ticket
+
+# Create tables on startup if they don't exist yet
+Base.metadata.create_all(bind=engine)
 
 # ── App ───────────────────────────────────────────────────────────────────────
 
-app = FastAPI(title="TrackTheTicket — Link Parser", version="1.0.0")
+app = FastAPI(title="TrackTheTicket", version="1.0.0")
 
-# Allow requests from the frontend dev server and production origin
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # tighten in production
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-# ── Schemas ───────────────────────────────────────────────────────────────────
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _sub_to_dict(sub: Subscription) -> dict:
+    """Map SQLAlchemy Subscription → dict the frontend expects."""
+    return {
+        "id":               sub.id,
+        "user_id":          sub.user_id,
+        "origin_iata":      sub.departure_airport,
+        "destination_iata": sub.arrival_airport,
+        "airline":          sub.airline,
+        "departure_date":   sub.departure_date,
+        "departure_time":   sub.departure_time,
+        "flight_number":    sub.flight_number,
+        "airline_iata":     sub.airline_iata,
+        "need_baggage":     sub.need_baggage,
+        "baggage_info":     "with_baggage" if sub.need_baggage else "no_baggage",
+        "source_url":       sub.source_url,
+        "is_active":        sub.is_active,
+        "created_at":       sub.created_at.isoformat(),
+        "check_frequency":  60,
+        "last_checked_at":  None,
+    }
+
+
+# ── Parse route ───────────────────────────────────────────────────────────────
 
 class ParseRequest(BaseModel):
     source_url: str
 
-
-# ── Routes ───────────────────────────────────────────────────────────────────
 
 @app.get("/health")
 def health() -> dict:
@@ -55,11 +83,6 @@ def health() -> dict:
 
 @app.post("/parse")
 async def parse(req: ParseRequest) -> dict:
-    """
-    Parse an Aviasales search URL and return extracted flight details.
-    Launches headless Chromium, intercepts the tickets-api response,
-    and returns structured ticket data.
-    """
     logger.info(f"[parse] → {req.source_url}")
     try:
         ticket = await fetch_parsed_ticket(req.source_url)
@@ -74,17 +97,64 @@ async def parse(req: ParseRequest) -> dict:
         raise HTTPException(status_code=500, detail="Internal parser error")
 
     return {
-        "origin_iata": ticket.origin_iata,
+        "origin_iata":      ticket.origin_iata,
         "destination_iata": ticket.destination_iata,
-        "departure_date": ticket.departure_date,
-        "departure_time": ticket.departure_time,
-        "flight_number": ticket.flight_number,
-        "airline": ticket.airline,
-        "airline_iata": ticket.airline_iata,
-        "baggage_info": ticket.baggage_info,
-        "is_round_trip": ticket.is_round_trip,
-        "price": ticket.price,
-        "currency": ticket.currency,
-        "passengers": ticket.passengers,
-        "ticket_sign": ticket.ticket_sign,
+        "departure_date":   ticket.departure_date,
+        "departure_time":   ticket.departure_time,
+        "flight_number":    ticket.flight_number,
+        "airline":          ticket.airline,
+        "airline_iata":     ticket.airline_iata,
+        "baggage_info":     ticket.baggage_info,
+        "is_round_trip":    ticket.is_round_trip,
+        "price":            ticket.price,
+        "currency":         ticket.currency,
+        "passengers":       ticket.passengers,
+        "ticket_sign":      ticket.ticket_sign,
     }
+
+
+# ── Subscriptions routes ──────────────────────────────────────────────────────
+
+@app.post("/subscriptions", status_code=201)
+def create_subscription(
+    payload: SubscriptionCreate,
+    db: Session = Depends(get_db),
+) -> dict:
+    logger.info(f"[subscriptions] create | {payload.origin_iata}→{payload.destination_iata}")
+
+    sub = Subscription(
+        user_id           = "default",
+        departure_airport = payload.origin_iata,
+        arrival_airport   = payload.destination_iata,
+        airline           = payload.airline,
+        departure_date    = payload.departure_date,
+        need_baggage      = payload.need_baggage,
+        source_url        = payload.source_url,
+        departure_time    = payload.departure_time,
+        flight_number     = payload.flight_number,
+        airline_iata      = payload.airline_iata,
+    )
+    db.add(sub)
+    db.commit()
+    db.refresh(sub)
+
+    logger.info(f"[subscriptions] saved | id={sub.id}")
+    return _sub_to_dict(sub)
+
+
+@app.get("/subscriptions")
+def list_subscriptions(db: Session = Depends(get_db)) -> list[dict]:
+    subs = db.query(Subscription).filter(Subscription.user_id == "default").all()
+    logger.info(f"[subscriptions] list | count={len(subs)}")
+    return [_sub_to_dict(s) for s in subs]
+
+
+@app.delete("/subscriptions/{sub_id}")
+def delete_subscription(sub_id: int, db: Session = Depends(get_db)) -> dict:
+    sub = db.get(Subscription, sub_id)
+    if sub is None:
+        raise HTTPException(status_code=404, detail=f"Subscription {sub_id} not found")
+    db.delete(sub)
+    db.commit()
+    logger.info(f"[subscriptions] deleted | id={sub_id}")
+    return {"ok": True}
