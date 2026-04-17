@@ -1,0 +1,32 @@
+services:
+
+  # ── Link-parser backend (FastAPI + Playwright) ─────────────────────────────
+  api:
+    build:
+      context: ./services/link-parser
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    # Auto-restart on code changes (requires watchfiles in requirements)
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./services/link-parser
+          target: /app
+
+  # ── Frontend (Vite dev server with HMR) ────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    volumes:
+      # Mount source for hot-module-replacement
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+    depends_on:
+      - api
