@@ -1,7 +1,4 @@
-"""
-Data models for the link-parser service.
-All fields use camelCase-friendly Python dataclasses — no ORM dependency here.
-"""
+"""Dataclasses produced by the link parser."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -63,10 +60,10 @@ class TravelSegment:
 @dataclass
 class BaggageInfo:
     """Baggage allowance for a ticket."""
-    hand_luggage: bool = True                   # hand luggage always included
-    checked_pieces: int = 0                     # number of checked bags (0 = no checked baggage)
-    checked_weight_kg: Optional[int] = None     # weight limit if specified
-    raw: str = ""                               # original string from API e.g. "1pc"
+    hand_luggage: bool = True
+    checked_pieces: int = 0
+    checked_weight_kg: Optional[int] = None
+    raw: str = ""
 
     def __str__(self) -> str:
         if self.raw:
@@ -80,26 +77,20 @@ class BaggageInfo:
 
 @dataclass
 class ParsedTicket:
-    """
-    Final parsed result returned by the link-parser.
-    Maps directly to the columns that need to be filled in the subscriptions table.
-    """
-    # Decoded from the URL — always available without network
+    """Final parsed result returned by the link parser."""
     origin_iata: str
     destination_iata: str
-    departure_date: str     # "YYYY-MM-DD"
+    departure_date: str
     passengers: int
 
-    # Filled in from the Aviasales API response
-    flight_number: Optional[str] = None         # first leg of first segment
-    airline: Optional[str] = None               # full airline name e.g. "Azimuth"
-    airline_iata: Optional[str] = None          # IATA carrier code e.g. "A9"
-    departure_time: Optional[str] = None        # "HH:MM" of first departure
-    baggage_info: Optional[str] = None          # human-readable baggage string
+    flight_number: Optional[str] = None
+    airline: Optional[str] = None
+    airline_iata: Optional[str] = None
+    departure_time: Optional[str] = None
+    baggage_info: Optional[str] = None
 
-    # Full structure for advanced use cases
     segments: list[TravelSegment] = field(default_factory=list)
     is_round_trip: bool = False
     price: Optional[int] = None
     currency: str = "RUB"
-    ticket_sign: Optional[str] = None          # Aviasales internal proposal ID
+    ticket_sign: Optional[str] = None

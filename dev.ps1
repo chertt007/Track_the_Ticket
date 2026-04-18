@@ -21,10 +21,18 @@ Start-Sleep -Milliseconds 500
 
 $root = $PSScriptRoot
 
+# Use the project venv python explicitly — system python may lack playwright etc.
+$venvPython = Join-Path $root ".venv\Scripts\python.exe"
+if (-not (Test-Path $venvPython)) {
+    Write-Host "ERROR: venv python not found at $venvPython" -ForegroundColor Red
+    Write-Host "Create the venv first: python -m venv .venv && .\.venv\Scripts\activate && pip install -r services\requirements.txt" -ForegroundColor Yellow
+    exit 1
+}
+
 Write-Host "Starting API (port 8000)..." -ForegroundColor Green
-$api = Start-Process -FilePath "python" `
+$api = Start-Process -FilePath $venvPython `
     -ArgumentList "run.py" `
-    -WorkingDirectory "$root\services\link-parser" `
+    -WorkingDirectory "$root\services" `
     -PassThru -NoNewWindow
 
 Write-Host "Starting Frontend (port 5173)..." -ForegroundColor Green

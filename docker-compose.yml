@@ -1,9 +1,12 @@
 services:
 
-  # ── Link-parser + API backend (FastAPI + Playwright + SQLite) ─────────────
+  # ── Backend API (FastAPI + Playwright + SQLite) ───────────────────────────
+  # Single HTTP service. link_parser and price_checker are libraries imported
+  # into api on demand, not separate processes.
   api:
     build:
-      context: ./services/link-parser
+      context: ./services
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     environment:
@@ -14,7 +17,7 @@ services:
     develop:
       watch:
         - action: sync+restart
-          path: ./services/link-parser
+          path: ./services
           target: /app
 
   # ── Frontend (Vite dev server with HMR) ────────────────────────────────────

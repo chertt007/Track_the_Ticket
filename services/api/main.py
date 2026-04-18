@@ -1,9 +1,9 @@
 """
-Link-parser HTTP service.
+TrackTheTicket HTTP API.
 
 Endpoints:
-  POST /parse                — parse an Aviasales URL, return flight details
   GET  /health               — liveness check
+  POST /parse                — parse an Aviasales URL, return flight details
   POST /subscriptions        — save a subscription to the DB
   GET  /subscriptions        — list subscriptions for a user
   DELETE /subscriptions/{id} — delete a subscription
@@ -26,10 +26,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from database import engine, get_db
-from db_models import Base, Subscription
-from schemas import SubscriptionCreate, SubscriptionOut
-from flight_parser import fetch_parsed_ticket
+from common.database import engine, get_db
+from common.db_models import Base, Subscription
+from link_parser import fetch_parsed_ticket
+from schemas import SubscriptionCreate, SubscriptionOut  # noqa: F401
 
 # Create tables on startup if they don't exist yet
 Base.metadata.create_all(bind=engine)

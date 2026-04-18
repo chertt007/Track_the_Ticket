@@ -34,8 +34,8 @@ from urllib.parse import urlparse, parse_qs
 
 from playwright.async_api import async_playwright
 
-from models import BaggageInfo, FlightLeg, ParsedTicket, TravelSegment
-from url_decoder import decode_url
+from .models import BaggageInfo, FlightLeg, ParsedTicket, TravelSegment
+from .url_decoder import decode_url
 
 logger = logging.getLogger(__name__)
 

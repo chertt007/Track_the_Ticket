@@ -1,4 +1,4 @@
-"""
+r"""
 Deterministic Aviasales URL decoder — no network required.
 
 Aviasales search URL format:
