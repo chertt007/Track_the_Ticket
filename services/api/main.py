@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 
 from common.database import engine, get_db
 from common.db_models import Base, Subscription
+from common.exceptions import SubscriptionNotFoundError
 from link_parser import fetch_parsed_ticket
 from price_checker import check_price
 from schemas import SubscriptionCreate, SubscriptionOut  # noqa: F401
@@ -157,18 +158,17 @@ def delete_subscription(sub_id: int, db: Session = Depends(get_db)) -> dict:
 
 
 @app.post("/subscriptions/{sub_id}/check")
-def check_subscription(sub_id: int, db: Session = Depends(get_db)) -> dict:
-    sub = db.get(Subscription, sub_id)
-    if sub is None:
-        raise HTTPException(status_code=404, detail=f"Subscription {sub_id} not found")
-
-    check_price(sub.id)
+def check_subscription(sub_id: int) -> dict:
+    try:
+        check_price(sub_id)
+    except SubscriptionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
 
     # Stub response — frontend reducer expects these fields.
     # Real price will be filled in once price_checker is implemented.
     return {
         "price":         None,
         "currency":      "RUB",
-        "flight_number": sub.flight_number,
+        "flight_number": None,
         "checked_at":    datetime.utcnow().isoformat(),
     }

@@ -1,6 +1,7 @@
 import logging
 
 from common.database import SessionLocal
+from common.exceptions import SubscriptionNotFoundError
 from common.queries import get_subscription
 
 logger = logging.getLogger(__name__)
@@ -13,13 +14,16 @@ def check_price(subscription_id: int) -> None:
     Stub for now: fetches the subscription from the DB and logs it.
     Real implementation will re-fetch the ticket via link_parser and
     compare against the previous price.
+
+    Raises:
+        SubscriptionNotFoundError: if no subscription exists with this id.
     """
     db = SessionLocal()
     try:
         sub = get_subscription(db, subscription_id)
         if sub is None:
             logger.warning(f"[price_checker] subscription id={subscription_id} not found")
-            return
+            raise SubscriptionNotFoundError(subscription_id)
 
         logger.info(
             f"[price_checker] triggered | id={sub.id} "
