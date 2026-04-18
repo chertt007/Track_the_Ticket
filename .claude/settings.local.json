@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -L \"https://docs.browser-use.com/\" -o /tmp/bu_main.html)",
+      "Read(//tmp/**)",
+      "Bash(curl -s -L \"https://docs.browser-use.com/open-source/customize/agent/all-parameters\" -o /tmp/bu_params.html)",
+      "Bash(curl -s -L \"https://docs.browser-use.com/quickstart\" -o /tmp/bu_quickstart.html)",
+      "Bash(curl -s -L \"https://docs.browser-use.com/quickstart-python\" -o /tmp/bu_quickstart_py.html)",
+      "WebFetch(domain:docs.browser-use.com)"
+    ]
+  }
+}

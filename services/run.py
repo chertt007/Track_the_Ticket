@@ -9,6 +9,12 @@ import os
 import sys
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+# Load .env from the project root (one level above services/).
+# Must happen before any agent/LLM code imports, so env vars are available.
+load_dotenv(Path(__file__).parent.parent / ".env")
+
 # On Windows, SelectorEventLoop cannot spawn subprocesses (Playwright needs that
 # to launch Chromium). Must be set before uvicorn creates the event loop.
 if sys.platform == "win32":
