@@ -158,9 +158,9 @@ def delete_subscription(sub_id: int, db: Session = Depends(get_db)) -> dict:
 
 
 @app.post("/subscriptions/{sub_id}/check")
-def check_subscription(sub_id: int) -> dict:
+async def check_subscription(sub_id: int) -> dict:
     try:
-        check_price(sub_id)
+        await check_price(sub_id)
     except SubscriptionNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
 

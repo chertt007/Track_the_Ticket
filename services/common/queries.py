@@ -14,3 +14,9 @@ def get_airline_url_by_name(db: Session, name: str) -> Optional[str]:
     """Look up an airline's website URL by its display name. None if not registered."""
     row = db.query(Airline).filter(Airline.airline_name == name).first()
     return row.airline_url if row else None
+
+
+def save_airline(db: Session, name: str, url: str) -> None:
+    """Insert a new airline into the `airlines` table and commit."""
+    db.add(Airline(airline_name=name, airline_url=url))
+    db.commit()
