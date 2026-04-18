@@ -18,18 +18,17 @@ def check_price(subscription_id: int) -> None:
     Raises:
         SubscriptionNotFoundError: if no subscription exists with this id.
     """
-    db = SessionLocal()
-    try:
+    with SessionLocal() as db:
         sub = get_subscription(db, subscription_id)
         if sub is None:
             logger.warning(f"[price_checker] subscription id={subscription_id} not found")
             raise SubscriptionNotFoundError(subscription_id)
 
+        airline_name = sub.airline
+
         logger.info(
             f"[price_checker] triggered | id={sub.id} "
             f"| {sub.departure_airport}→{sub.arrival_airport} "
-            f"| {sub.airline} | {sub.departure_date} {sub.departure_time} "
+            f"| {airline_name} | {sub.departure_date} {sub.departure_time} "
             f"| need_baggage={sub.need_baggage} | source_url={sub.source_url}"
         )
-    finally:
-        db.close()
