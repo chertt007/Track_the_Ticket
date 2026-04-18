@@ -19,6 +19,12 @@ logger = logging.getLogger(__name__)
 # server without a display; keep False in local dev to watch the agent work.
 HEADLESS = False
 
+# LLM model. Options:
+#   "bu-1-0"   — budget model  ($0.20 / $0.02 / $2.00 per input/output/agent-task)
+#   "bu-2-0"   — premium model ($0.60 / $0.06 / $3.50)
+#   "bu-latest" — alias to newest (may shift costs over time)
+LLM_MODEL = "bu-1-0"
+
 
 class _AirlineUrlResult(BaseModel):
     """Structured output — forces the agent to return a clean URL string."""
@@ -46,7 +52,7 @@ async def find_airline_url_online(airline_name: str) -> Optional[str]:
     try:
         agent = Agent(
             task=task,
-            llm=ChatBrowserUse(),                        # uses BROWSER_USE_API_KEY
+            llm=ChatBrowserUse(model=LLM_MODEL),          # uses BROWSER_USE_API_KEY
             browser=Browser(is_local=True, headless=HEADLESS),
             output_model_schema=_AirlineUrlResult,
             max_actions_per_step=3,
