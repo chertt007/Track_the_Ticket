@@ -16,6 +16,7 @@ import LinkIcon from '@mui/icons-material/Link'
 import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff'
 import LuggageIcon from '@mui/icons-material/Luggage'
 import { useT } from '../hooks/useT'
+import { useLocale } from '../hooks/useLocale'
 import { parseTicketUrl } from '../api'
 import { useAppDispatch } from '../hooks'
 import { createSubscriptionApi } from '../store/slices/subscriptionsSlice'
@@ -49,6 +50,7 @@ interface Props {
 
 export default function AddSubscriptionModal({ open, onClose }: Props) {
   const t = useT()
+  const locale = useLocale()
   const dispatch = useAppDispatch()
 
   const [step, setStep] = useState<Step>('input')
@@ -207,8 +209,12 @@ export default function AddSubscriptionModal({ open, onClose }: Props) {
                   <Box sx={s.infoItem}>
                     <Typography sx={s.infoLabel}>{t('departure')}</Typography>
                     <Typography sx={s.infoValue}>
-                      {parsedData.departure_date ?? '—'}
-                      {parsedData.departure_time ? ` ${parsedData.departure_time}` : ''}
+                      {parsedData.departure_date
+                        ? new Date(parsedData.departure_date).toLocaleDateString(locale, {
+                            day: 'numeric', month: 'long', year: 'numeric',
+                          })
+                        : '—'}
+                      {parsedData.departure_time ? ` · ${parsedData.departure_time}` : ''}
                     </Typography>
                   </Box>
                   <Box sx={s.infoItem}>
