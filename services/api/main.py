@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import logging
 import sys
+from datetime import datetime
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -29,6 +30,7 @@ from sqlalchemy.orm import Session
 from common.database import engine, get_db
 from common.db_models import Base, Subscription
 from link_parser import fetch_parsed_ticket
+from price_checker import check_price
 from schemas import SubscriptionCreate, SubscriptionOut  # noqa: F401
 
 # Create tables on startup if they don't exist yet
@@ -157,3 +159,21 @@ def delete_subscription(sub_id: int, db: Session = Depends(get_db)) -> dict:
     db.commit()
     logger.info(f"[subscriptions] deleted | id={sub_id}")
     return {"ok": True}
+
+
+@app.post("/subscriptions/{sub_id}/check")
+def check_subscription(sub_id: int, db: Session = Depends(get_db)) -> dict:
+    sub = db.get(Subscription, sub_id)
+    if sub is None:
+        raise HTTPException(status_code=404, detail=f"Subscription {sub_id} not found")
+
+    check_price(sub.id)
+
+    # Stub response — frontend reducer expects these fields.
+    # Real price will be filled in once price_checker is implemented.
+    return {
+        "price":         None,
+        "currency":      "RUB",
+        "flight_number": sub.flight_number,
+        "checked_at":    datetime.utcnow().isoformat(),
+    }
