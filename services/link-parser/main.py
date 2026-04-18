@@ -65,7 +65,6 @@ def _sub_to_dict(sub: Subscription) -> dict:
         "source_url":       sub.source_url,
         "is_active":        sub.is_active,
         "created_at":       sub.created_at.isoformat(),
-        "check_frequency":  60,
         "last_checked_at":  None,
     }
 

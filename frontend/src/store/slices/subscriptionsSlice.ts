@@ -17,7 +17,6 @@ interface SubscriptionApiResponse {
   airline: string | null
   baggage_info: string | null
   is_active: boolean
-  check_frequency: number
   last_checked_at: string | null
   last_notified_at: string | null
 }
@@ -36,7 +35,6 @@ function mapSubscription(raw: SubscriptionApiResponse): Subscription {
     baggageInfo:     raw.baggage_info   ?? '—',
     sourceUrl:       raw.source_url,
     isActive:        raw.is_active,
-    checkFrequency:  raw.check_frequency,
     lastCheckedAt:   raw.last_checked_at,
     lastPrice:       null, // fetched separately via GET /subscriptions/{id}/prices
     currency:        'RUB',
@@ -125,7 +123,6 @@ const subscriptionsSlice = createSlice({
         baggageInfo:     '—',
         sourceUrl:       action.payload.url,
         isActive:        true,
-        checkFrequency:  3,
         lastCheckedAt:   null,
         lastPrice:       null,
         currency:        'RUB',

@@ -11,7 +11,6 @@ export interface Subscription {
   baggageInfo: string
   sourceUrl: string
   isActive: boolean
-  checkFrequency: number
   lastCheckedAt: string | null
   lastPrice: number | null
   currency: string

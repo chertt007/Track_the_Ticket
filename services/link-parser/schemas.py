@@ -57,9 +57,6 @@ class SubscriptionOut(BaseModel):
     baggage_info:     str            # reconstructed: 'with_baggage' | 'no_baggage'
     is_active:        bool
     created_at:       str            # ISO string
-
-    # Fields the frontend mapSubscription reads (provide defaults)
-    check_frequency:  int  = 60
     last_checked_at:  Optional[str] = None
 
     model_config = {"from_attributes": True}  # allows creating from SQLAlchemy model

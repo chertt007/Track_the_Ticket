@@ -202,10 +202,6 @@ export default function SubscriptionDetailPage() {
             <Typography variant="body2" fontWeight={600}>{sub.baggageInfo}</Typography>
           </Box>
           <Box sx={s.detailItem}>
-            <Typography variant="caption" color="text.secondary">{t('checkFrequencyLabel')}</Typography>
-            <Typography variant="body2" fontWeight={600}>{sub.checkFrequency}×</Typography>
-          </Box>
-          <Box sx={s.detailItem}>
             <Typography variant="caption" color="text.secondary">{t('lastChecked')}</Typography>
             <Typography variant="body2" fontWeight={600}>
               {sub.lastCheckedAt
