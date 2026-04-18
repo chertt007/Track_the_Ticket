@@ -2,9 +2,15 @@
 from typing import Optional
 from sqlalchemy.orm import Session
 
-from .db_models import Subscription
+from .db_models import Airline, Subscription
 
 
 def get_subscription(db: Session, subscription_id: int) -> Optional[Subscription]:
     """Fetch a single subscription by primary key. Returns None if not found."""
     return db.get(Subscription, subscription_id)
+
+
+def get_airline_url_by_name(db: Session, name: str) -> Optional[str]:
+    """Look up an airline's website URL by its display name. None if not registered."""
+    row = db.query(Airline).filter(Airline.airline_name == name).first()
+    return row.airline_url if row else None

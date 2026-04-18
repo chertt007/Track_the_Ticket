@@ -24,3 +24,12 @@ class Subscription(Base):
 
     is_active         = Column(Boolean, default=True, nullable=False)
     created_at        = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class Airline(Base):
+    """Lookup table mapping an airline display name to its website URL."""
+    __tablename__ = "airlines"
+
+    id           = Column(Integer, primary_key=True, index=True)
+    airline_name = Column(String, nullable=False, unique=True, index=True)
+    airline_url  = Column(String, nullable=False)
