@@ -1,5 +1,8 @@
 import logging
 
+from common.database import SessionLocal
+from common.queries import get_subscription
+
 logger = logging.getLogger(__name__)
 
 
@@ -7,7 +10,22 @@ def check_price(subscription_id: int) -> None:
     """
     Trigger a price re-check for the given subscription.
 
-    Stub for now: just logs that it was called. Real implementation will
-    re-fetch the ticket via link_parser and compare against the previous price.
+    Stub for now: fetches the subscription from the DB and logs it.
+    Real implementation will re-fetch the ticket via link_parser and
+    compare against the previous price.
     """
-    logger.info(f"[price_checker] triggered for subscription id={subscription_id}")
+    db = SessionLocal()
+    try:
+        sub = get_subscription(db, subscription_id)
+        if sub is None:
+            logger.warning(f"[price_checker] subscription id={subscription_id} not found")
+            return
+
+        logger.info(
+            f"[price_checker] triggered | id={sub.id} "
+            f"| {sub.departure_airport}→{sub.arrival_airport} "
+            f"| {sub.airline} | {sub.departure_date} {sub.departure_time} "
+            f"| need_baggage={sub.need_baggage} | source_url={sub.source_url}"
+        )
+    finally:
+        db.close()

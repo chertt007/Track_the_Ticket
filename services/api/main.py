@@ -11,15 +11,10 @@ Endpoints:
 from __future__ import annotations
 
 import logging
-import sys
 from datetime import datetime
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
-    stream=sys.stdout,
-    force=True,
-)
+from common.logging_config import setup_logging
+setup_logging()
 logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI, HTTPException, Depends
