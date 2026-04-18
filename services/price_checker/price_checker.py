@@ -32,10 +32,4 @@ def check_price(subscription_id: int) -> None:
         else:
             logger.info(f"[price_checker] airline '{airline_name}' → url={airline_url}")
 
-        logger.info(
-            f"[price_checker] triggered | id={sub.id} "
-            f"| {sub.departure_airport}→{sub.arrival_airport} "
-            f"| {airline_name} | {sub.departure_date} {sub.departure_time} "
-            f"| need_baggage={sub.need_baggage} | source_url={sub.source_url}"
-        )
         
