@@ -14,7 +14,6 @@ export interface Subscription {
   lastCheckedAt: string | null
   lastPrice: number | null
   currency: string
-  screenshotUrl?: string
 }
 
 export interface PriceHistory {
@@ -25,8 +24,6 @@ export interface PriceHistory {
   s3Key: string | null
   checkedAt: string
   status: 'ok' | 'failed' | 'suspicious'
-  // mock field — will be replaced by presigned S3 URL from API in FE-07
-  mockScreenshotUrl?: string
 }
 
 export interface User {
@@ -34,14 +31,3 @@ export interface User {
   email: string
   telegramId: string | null
 }
-
-/** One screenshot entry as returned by GET /subscriptions/{id}/screenshots */
-export interface ScreenshotItem {
-  url: string
-  checkedAt: string   // ISO datetime string
-  price: number
-  currency: string
-  status: string
-}
-
-// TicketPreview will be added back once the backend Playwright parsing is wired up

@@ -49,18 +49,11 @@ export const translations = {
     baggageNo: 'Нет',
     confirmButton: 'Подтвердить',
 
-    // ScreenshotPreview
-    screenshotAlt: 'Скриншот цены',
-    clickToEnlarge: 'Нажмите для увеличения',
-    close: 'Закрыть',
-
     // SubscriptionDetailPage
     backToDashboard: 'Назад',
     flightInfo: 'Информация о рейсе',
     priceHistory: 'История цен',
-    screenshots: 'Скриншоты',
     noPriceData: 'Нет данных о ценах',
-    noScreenshots: 'Нет скриншотов',
     subscriptionNotFound: 'Подписка не найдена',
     currentPrice: 'Текущая цена',
     minPrice: 'Минимум за 7 дней',
@@ -181,18 +174,11 @@ export const translations = {
     baggageNo: 'No',
     confirmButton: 'Confirm',
 
-    // ScreenshotPreview
-    screenshotAlt: 'Price screenshot',
-    clickToEnlarge: 'Click to enlarge',
-    close: 'Close',
-
     // SubscriptionDetailPage
     backToDashboard: 'Back',
     flightInfo: 'Flight Info',
     priceHistory: 'Price History',
-    screenshots: 'Screenshots',
     noPriceData: 'No price data yet',
-    noScreenshots: 'No screenshots yet',
     subscriptionNotFound: 'Subscription not found',
     currentPrice: 'Current price',
     minPrice: '7-day low',

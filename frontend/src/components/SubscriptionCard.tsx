@@ -15,7 +15,6 @@ import { useT } from '../hooks/useT'
 import { useLocale } from '../hooks/useLocale'
 import { useAppDispatch, useAppSelector } from '../hooks'
 import { setCheckingId, checkSubscriptionApi, deleteSubscriptionApi } from '../store/slices/subscriptionsSlice'
-import ScreenshotPreview from './ScreenshotPreview'
 import { cardStyles as s } from './SubscriptionCard.styles'
 import type { Subscription } from '../types'
 
@@ -94,13 +93,6 @@ export default function SubscriptionCard({ subscription: sub }: Props) {
               })
             : t('never')}
         </Typography>
-      </Box>
-
-      {/* ── Screenshot ───────────────────────────────────────────────────── */}
-      <Box sx={s.screenshotBox}>
-        <ScreenshotPreview
-          src={sub.screenshotUrl ?? 'https://placehold.co/320x180/9B1B5A/white?text=No+data'}
-        />
       </Box>
 
       {/* ── Actions ──────────────────────────────────────────────────────── */}

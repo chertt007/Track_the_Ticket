@@ -49,11 +49,6 @@ export const cardStyles = {
     display: 'block',
   } as SxProps<Theme>,
 
-  screenshotBox: {
-    mx: { xs: 0, md: 2 },
-    flexShrink: 0,
-  } as SxProps<Theme>,
-
   checkButton: {
     color: berryPalette.raspberry,
     background: alpha(berryPalette.rose, 0.15),

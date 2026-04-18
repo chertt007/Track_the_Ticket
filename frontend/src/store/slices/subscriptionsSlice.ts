@@ -38,7 +38,6 @@ function mapSubscription(raw: SubscriptionApiResponse): Subscription {
     lastCheckedAt:   raw.last_checked_at,
     lastPrice:       null, // fetched separately via GET /subscriptions/{id}/prices
     currency:        'RUB',
-    screenshotUrl:   undefined,
   }
 }
 
@@ -64,7 +63,6 @@ export interface CheckResult {
   currency: string
   flight_number: string
   checked_at: string
-  screenshot_b64: string | null
 }
 
 export const checkSubscriptionApi = createAsyncThunk<
@@ -174,9 +172,6 @@ const subscriptionsSlice = createSlice({
           sub.lastPrice = result.price
           sub.currency = result.currency
           sub.lastCheckedAt = result.checked_at
-          if (result.screenshot_b64) {
-            sub.screenshotUrl = `data:image/png;base64,${result.screenshot_b64}`
-          }
         }
         state.checkingId = null
       })

@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Card from '@mui/material/Card'
@@ -26,20 +25,8 @@ import { useAppSelector } from '../hooks'
 import { useT } from '../hooks/useT'
 import { useLocale } from '../hooks/useLocale'
 import { mockPriceHistory } from '../mocks/priceHistory'
-import ScreenshotSlider from '../components/ScreenshotSlider'
 import { detailStyles as s } from './SubscriptionDetailPage.styles'
 import { berryPalette } from '../theme'
-import type { ScreenshotItem } from '../types'
-import { apiClient } from '../api'
-
-// API response shape for GET /subscriptions/{id}/screenshots
-interface ScreenshotApiItem {
-  url: string
-  checked_at: string
-  price: number
-  currency: string
-  status: string
-}
 
 // Custom recharts tooltip with berry styling
 function PriceTooltip({ active, payload, label }: {
@@ -66,33 +53,6 @@ export default function SubscriptionDetailPage() {
 
   const sub = useAppSelector(st => st.subscriptions.items.find(s => s.id === id))
   const history = id ? (mockPriceHistory[id] ?? []) : []
-
-  // Load screenshots from API when the page opens
-  const [screenshots, setScreenshots] = useState<ScreenshotItem[]>([])
-  const [screenshotsLoading, setScreenshotsLoading] = useState(false)
-
-  useEffect(() => {
-    if (!id) return
-    setScreenshotsLoading(true)
-    apiClient
-      .get<ScreenshotApiItem[]>(`/subscriptions/${id}/screenshots`)
-      .then(({ data }) => {
-        setScreenshots(
-          data.map(item => ({
-            url: item.url,
-            checkedAt: item.checked_at,
-            price: item.price,
-            currency: item.currency,
-            status: item.status,
-          }))
-        )
-      })
-      .catch(() => {
-        // Silently ignore — screenshots section will show "No screenshots yet"
-        setScreenshots([])
-      })
-      .finally(() => setScreenshotsLoading(false))
-  }, [id])
 
   // Subscription not found
   if (!sub) {
@@ -287,11 +247,6 @@ export default function SubscriptionDetailPage() {
         )}
       </Card>
 
-      {/* ── Screenshot slider ───────────────────────────────────────────── */}
-      <Card elevation={0} sx={s.galleryCard}>
-        <Typography variant="h6" sx={s.sectionLabel}>{t('screenshots')}</Typography>
-        <ScreenshotSlider screenshots={screenshots} loading={screenshotsLoading} />
-      </Card>
     </Box>
   )
 }

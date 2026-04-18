@@ -126,47 +126,6 @@ export const detailStyles = {
     mx: { xs: -1, sm: 0 },
   } as SxProps<Theme>,
 
-  // ── Screenshot gallery card ──────────────────────────────────────────────
-  galleryCard: {
-    ...glassCard,
-  } as SxProps<Theme>,
-
-  galleryGrid: {
-    display: 'grid',
-    gridTemplateColumns: {
-      xs: 'repeat(2, 1fr)',
-      sm: 'repeat(3, 1fr)',
-      md: 'repeat(4, 1fr)',
-    },
-    gap: 1.5,
-    mt: 2,
-  } as SxProps<Theme>,
-
-  galleryItem: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: 0.5,
-  } as SxProps<Theme>,
-
-  galleryDateRow: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 0.5,
-  } as SxProps<Theme>,
-
-  failedBadge: {
-    background: alpha('#f44336', 0.12),
-    color: '#c62828',
-    border: `1px solid ${alpha('#f44336', 0.3)}`,
-    borderRadius: 1,
-    px: 0.75,
-    py: 0.25,
-    fontSize: '0.65rem',
-    fontWeight: 700,
-    lineHeight: 1.4,
-  } as SxProps<Theme>,
-
   // ── Chart tooltip ────────────────────────────────────────────────────────
   chartTooltip: {
     background: 'rgba(255,255,255,0.95)',
