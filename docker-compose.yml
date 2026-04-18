@@ -1,6 +1,6 @@
 services:
 
-  # ── Link-parser backend (FastAPI + Playwright) ─────────────────────────────
+  # ── Link-parser + API backend (FastAPI + Playwright + SQLite) ─────────────
   api:
     build:
       context: ./services/link-parser
@@ -8,7 +8,9 @@ services:
       - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
-    # Auto-restart on code changes (requires watchfiles in requirements)
+      - DATABASE_PATH=/data/tracktheticket.db
+    volumes:
+      - api_data:/data
     develop:
       watch:
         - action: sync+restart
@@ -25,8 +27,13 @@ services:
     environment:
       - VITE_API_URL=http://localhost:8000
     volumes:
-      # Mount source for hot-module-replacement
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public
     depends_on:
       - api
+
+volumes:
+  api_data:
+    # Named volume — survives container recreation, lives on host disk.
+    # On Hetzner: /var/lib/docker/volumes/tracktheticket_api_data/_data/
+    # Remove only with: docker compose down -v  (intentional action)
