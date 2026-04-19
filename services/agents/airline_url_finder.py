@@ -6,12 +6,13 @@ airline. The result is cached in the DB by the caller so the agent runs
 at most once per airline.
 """
 import logging
+import os
 from typing import Optional
 
 from pydantic import BaseModel
 
 from browser_use import Agent, Browser
-from browser_use.llm import ChatBrowserUse
+from browser_use.llm import ChatOpenRouter
 
 logger = logging.getLogger(__name__)
 
@@ -19,11 +20,12 @@ logger = logging.getLogger(__name__)
 # server without a display; keep False in local dev to watch the agent work.
 HEADLESS = False
 
-# LLM model. Options:
-#   "bu-1-0"   — budget model  ($0.20 / $0.02 / $2.00 per input/output/agent-task)
-#   "bu-2-0"   — premium model ($0.60 / $0.06 / $3.50)
-#   "bu-latest" — alias to newest (may shift costs over time)
-LLM_MODEL = "bu-1-0"
+# OpenRouter model. Format: "<provider>/<model>". Catalog: https://openrouter.ai/models
+# Suggested:
+#   "google/gemini-2.5-flash"     — cheap + fast + vision, good default
+#   "anthropic/claude-sonnet-4-6" — best quality, higher cost
+#   "openai/gpt-4o"               — balanced
+LLM_MODEL = "google/gemini-2.5-flash"
 
 
 class _AirlineUrlResult(BaseModel):
@@ -52,7 +54,10 @@ async def find_airline_url_online(airline_name: str) -> Optional[str]:
     try:
         agent = Agent(
             task=task,
-            llm=ChatBrowserUse(model=LLM_MODEL),          # uses BROWSER_USE_API_KEY
+            llm=ChatOpenRouter(
+                model=LLM_MODEL,
+                api_key=os.environ.get("OPENROUTER_API_KEY"),
+            ),
             browser=Browser(is_local=True, headless=HEADLESS),
             output_model_schema=_AirlineUrlResult,
             max_actions_per_step=3,
