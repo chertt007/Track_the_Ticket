@@ -6,6 +6,19 @@ import sys
 _YELLOW = "\033[33m"
 _RESET  = "\033[0m"
 
+# Third-party loggers that spam at INFO/DEBUG. Keep only WARNING+ from these.
+_NOISY_LOGGERS = [
+    "browser_use",
+    "cdp_use",
+    "httpcore",
+    "httpx",
+    "websockets",
+    "asyncio",
+    "urllib3",
+    "playwright",
+    "uvicorn.access",
+]
+
 
 class ColoredFormatter(logging.Formatter):
     """Prepends [FUNCTION: <caller>] in yellow to every log line."""
@@ -16,7 +29,11 @@ class ColoredFormatter(logging.Formatter):
 
 
 def setup_logging(level: int = logging.DEBUG) -> None:
-    """Configure the root logger. Safe to call multiple times — replaces existing handlers."""
+    """
+    Configure the root logger for the whole backend.
+    Our code logs at DEBUG; noisy third-party libs are clamped to WARNING.
+    Safe to call multiple times — replaces existing handlers.
+    """
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(ColoredFormatter(
         fmt="%(asctime)s %(funcTag)s %(name)s — %(message)s"
@@ -25,3 +42,6 @@ def setup_logging(level: int = logging.DEBUG) -> None:
     root.handlers.clear()
     root.addHandler(handler)
     root.setLevel(level)
+
+    for name in _NOISY_LOGGERS:
+        logging.getLogger(name).setLevel(logging.WARNING)
