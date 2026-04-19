@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import Card from '@mui/material/Card'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
@@ -5,6 +6,12 @@ import Chip from '@mui/material/Chip'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
 import CircularProgress from '@mui/material/CircularProgress'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogContentText from '@mui/material/DialogContentText'
+import DialogActions from '@mui/material/DialogActions'
+import Button from '@mui/material/Button'
 import SyncIcon from '@mui/icons-material/Sync'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff'
@@ -30,18 +37,25 @@ export default function SubscriptionCard({ subscription: sub }: Props) {
   const checkingId = useAppSelector(st => st.subscriptions.checkingId)
   const isChecking = checkingId === sub.id
 
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
   const handleCheck = (e: React.MouseEvent) => {
     e.stopPropagation()
     dispatch(setCheckingId(sub.id))
     dispatch(checkSubscriptionApi(sub.id))
   }
 
-  const handleDelete = (e: React.MouseEvent) => {
+  const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (window.confirm(t('deleteConfirm'))) {
-      dispatch(deleteSubscriptionApi(sub.id))
-    }
+    setConfirmOpen(true)
   }
+
+  const handleConfirmDelete = () => {
+    setConfirmOpen(false)
+    dispatch(deleteSubscriptionApi(sub.id))
+  }
+
+  const handleCancelDelete = () => setConfirmOpen(false)
 
   const formattedDate = sub.departureDate !== '—'
     ? new Date(sub.departureDate).toLocaleDateString(locale, {
@@ -107,11 +121,39 @@ export default function SubscriptionCard({ subscription: sub }: Props) {
           </span>
         </Tooltip>
         <Tooltip title={t('deleteSubscription')}>
-          <IconButton onClick={handleDelete} size="small" sx={s.deleteButton}>
+          <IconButton onClick={handleDeleteClick} size="small" sx={s.deleteButton}>
             <DeleteOutlineIcon fontSize="small" />
           </IconButton>
         </Tooltip>
       </Box>
+
+      {/* ── Delete confirm dialog ──────────────────────────────────────── */}
+      <Dialog
+        open={confirmOpen}
+        onClose={handleCancelDelete}
+        onClick={e => e.stopPropagation()}
+        PaperProps={{ sx: s.dialogPaper }}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={s.dialogTitleRow}>
+          <Box sx={s.dialogIconCircle}>
+            <DeleteOutlineIcon fontSize="small" />
+          </Box>
+          {t('deleteSubscription')}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>{t('deleteConfirm')}</DialogContentText>
+        </DialogContent>
+        <DialogActions sx={s.dialogActions}>
+          <Button onClick={handleCancelDelete} sx={s.dialogCancelButton}>
+            {t('cancel')}
+          </Button>
+          <Button onClick={handleConfirmDelete} variant="contained" sx={s.dialogDeleteButton}>
+            {t('delete')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   )
 }

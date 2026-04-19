@@ -27,6 +27,7 @@ export const translations = {
     checking: 'Проверяем...',
     deleteSubscription: 'Удалить подписку',
     deleteConfirm: 'Удалить эту подписку? Это действие необратимо.',
+    delete: 'Удалить',
     lastPrice: 'Последняя цена',
 
     // AddSubscriptionModal
@@ -152,6 +153,7 @@ export const translations = {
     checking: 'Checking...',
     deleteSubscription: 'Delete subscription',
     deleteConfirm: 'Delete this subscription? This action cannot be undone.',
+    delete: 'Delete',
     lastPrice: 'Last price',
 
     // AddSubscriptionModal
