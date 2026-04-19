@@ -24,6 +24,10 @@ services_dir = Path(__file__).parent
 sys.path.insert(0, str(services_dir))          # for `from common...`, `from link_parser...`
 sys.path.insert(0, str(services_dir / "api"))  # for `from schemas import ...`
 
+# Observability must be wired BEFORE main/browser-use imports openai.
+from common.observability import setup_observability
+setup_observability()
+
 import uvicorn
 
 if __name__ == "__main__":

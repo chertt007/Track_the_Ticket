@@ -9,6 +9,7 @@ import logging
 import os
 from typing import Optional
 
+from langfuse import observe
 from pydantic import BaseModel
 
 from browser_use import Agent, Browser
@@ -33,6 +34,7 @@ class _AirlineUrlResult(BaseModel):
     url: Optional[str] = None
 
 
+@observe(name="find_airline_url_online")
 async def find_airline_url_online(airline_name: str) -> Optional[str]:
     """
     Run a browser-use agent to find the airline's official website URL.
