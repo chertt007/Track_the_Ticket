@@ -31,16 +31,19 @@ if sys.platform == "win32":
 
 from playwright.async_api import async_playwright  # noqa: E402
 
-from agents.vision_search_agent import (  # noqa: E402
+from agents.vision_common import (  # noqa: E402
     VIEWPORT_HEIGHT,
     VIEWPORT_WIDTH,
-    fill_search_form,
+    resolve_active_page,
 )
+from agents.vision_pick_flight_agent import pick_flight  # noqa: E402
+from agents.vision_search_agent import fill_search_form  # noqa: E402
 from common.database import SessionLocal  # noqa: E402
 from common.queries import get_airline_url_by_name, get_subscription  # noqa: E402
 
 SUBSCRIPTION_ID = 1
 POST_RUN_HOLD_SECONDS = 30
+SCREENSHOTS_DIR = SERVICES_DIR / "screenshots"
 
 # Force unbuffered stdout so log lines appear immediately (Windows terminals
 # sometimes buffer hard, hiding what the agent is doing in real time).
@@ -93,14 +96,51 @@ async def main() -> int:
         logger.info(f"opening {airline_url}")
         await page.goto(airline_url, wait_until="domcontentloaded")
 
-        ok = await fill_search_form(
+        # Stage A — fill search form, click submit.
+        stage_a_ok = await fill_search_form(
             page=page,
             origin_iata=sub.departure_airport,
             destination_iata=sub.arrival_airport,
             departure_date=sub.departure_date,
             departure_time=sub.departure_time,
         )
-        logger.info(f"agent returned: ok={ok}")
+        logger.info(f"stage A (fill_search_form): ok={stage_a_ok}")
+
+        stage_b_ok = False
+        no_match = False
+        screenshot_path = None
+
+        if stage_a_ok:
+            # Stage B — pick the specific flight, configure fare, land on price view.
+            stage_b_ok, no_match = await pick_flight(
+                page=page,
+                origin_iata=sub.departure_airport,
+                destination_iata=sub.arrival_airport,
+                departure_date=sub.departure_date,
+                departure_time=sub.departure_time,
+                need_baggage=bool(sub.need_baggage),
+                flight_number=sub.flight_number,
+            )
+            logger.info(f"stage B (pick_flight): ok={stage_b_ok} no_match={no_match}")
+
+            # Stage C — mechanical screenshot of the price view.
+            # The price page may live on a tab opened by stage B (some airlines
+            # use target=_blank), so resolve the active page once more here.
+            if stage_b_ok and not no_match:
+                SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
+                stamp = asyncio.get_event_loop().time()
+                screenshot_path = (
+                    SCREENSHOTS_DIR
+                    / f"{sub.departure_airport}_{sub.arrival_airport}_{sub.departure_date}_{int(stamp)}.jpg"
+                )
+                final_page = await resolve_active_page(page)
+                await final_page.screenshot(
+                    path=str(screenshot_path),
+                    full_page=True,
+                    type="jpeg",
+                    quality=85,
+                )
+                logger.info(f"stage C: screenshot saved → {screenshot_path}")
 
         logger.info(f"holding browser open for {POST_RUN_HOLD_SECONDS}s for inspection…")
         await asyncio.sleep(POST_RUN_HOLD_SECONDS)
@@ -108,7 +148,13 @@ async def main() -> int:
         await context.close()
         await browser.close()
 
-    return 0 if ok else 2
+    if not stage_a_ok:
+        return 2
+    if no_match:
+        return 3
+    if not stage_b_ok:
+        return 4
+    return 0
 
 
 if __name__ == "__main__":
