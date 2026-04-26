@@ -1,8 +1,11 @@
 """Database query helpers — one place for all SELECT logic."""
+import logging
 from typing import Optional
 from sqlalchemy.orm import Session
 
 from .db_models import Airline, Subscription
+
+logger = logging.getLogger(__name__)
 
 
 def get_subscription(db: Session, subscription_id: int) -> Optional[Subscription]:
@@ -20,3 +23,4 @@ def save_airline(db: Session, name: str, url: str) -> None:
     """Insert a new airline into the `airlines` table and commit."""
     db.add(Airline(airline_name=name, airline_url=url))
     db.commit()
+    logger.info(f"[queries] saved airline '{name}' → {url}")

@@ -45,3 +45,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# ── Agent artefacts ──────────────────────────────────────────────────────────
+screenshots/
+services/screenshots/
+
