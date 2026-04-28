@@ -84,16 +84,18 @@ async def pick_flight(
     departure_time: str,
     need_baggage: bool,
     flight_number: Optional[str] = None,
-) -> tuple[bool, bool]:
+) -> tuple[bool, bool, list[dict]]:
     """
     Drive the results page to a state where the price for the requested flight
     is visible.
 
     Returns:
-        (ok, no_match)
+        (ok, no_match, recorded_actions)
             ok=True  + no_match=False  → caller can screenshot the price.
             ok=True  + no_match=True   → flight at this time is not offered.
             ok=False + no_match=False  → agent loop failed (timeout / API / steps).
+        recorded_actions is the ordered list of actions executed in this
+        stage, suitable for replay.
     """
     logger.info(
         f"[vision_pick_flight_agent] called | {origin_iata}→{destination_iata} on {departure_date} "
@@ -115,7 +117,7 @@ async def pick_flight(
         baggage_required="TRUE" if need_baggage else "FALSE",
     )
 
-    ok, final_text = await run_agent_loop(
+    ok, final_text, actions = await run_agent_loop(
         page, prompt, log_prefix="[vision_pick_flight_agent]"
     )
 
@@ -124,4 +126,4 @@ async def pick_flight(
         logger.info(
             f"[vision_pick_flight_agent] agent reported no flight at {departure_time}"
         )
-    return ok, no_match
+    return ok, no_match, actions

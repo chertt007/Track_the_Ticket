@@ -32,6 +32,11 @@ MAX_TOKENS_PER_TURN = 4096
 # rate limits (RPM and ITPM). Cheap insurance, ~45s extra over a 30-step run.
 PAUSE_BETWEEN_STEPS = 1.5
 
+# Actions that observe the page without mutating it. We skip these when
+# recording a strategy for replay — replaying them is pointless and they
+# only inflate the action list.
+NON_STATEFUL_ACTIONS = {"screenshot", "cursor_position"}
+
 # Keep `httpx` and `anthropic` at INFO so the useful one-liners stay visible:
 #   httpx          → "HTTP Request: POST https://api.anthropic.com/... 200 OK"
 #   anthropic      → "[FUNCTION: request] anthropic._base_client request_id=..."
@@ -210,7 +215,7 @@ async def run_agent_loop(
     page: Page,
     system_prompt: str,
     log_prefix: str = "[vision_agent]",
-) -> tuple[bool, str]:
+) -> tuple[bool, str, list[dict]]:
     """
     Run an Anthropic Computer Use agent loop until the model stops calling tools.
 
@@ -220,25 +225,32 @@ async def run_agent_loop(
         log_prefix:     Prefix for log lines so multiple agents are distinguishable.
 
     Returns:
-        (ok, final_text):
+        (ok, final_text, recorded_actions):
           - ok: True if the loop exited cleanly via end_turn, False on
                 API error, timeout, MAX_STEPS, or unexpected stop_reason.
           - final_text: concatenation of the model's last text blocks
                 (used by callers to detect custom signals like "Done"
                 vs "No matching flight"). Empty string if there was no
                 text in the final turn.
+          - recorded_actions: list of action-input dicts that were
+                successfully executed in the order executed. Read-only
+                actions (NON_STATEFUL_ACTIONS) are excluded. The caller
+                may persist this list to replay the run later without
+                LLM calls.
     """
+    recorded_actions: list[dict] = []
+
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         logger.error(f"{log_prefix} ANTHROPIC_API_KEY is not set in environment")
-        return False, ""
+        return False, "", recorded_actions
     logger.info(f"{log_prefix} API key present (len={len(api_key)})")
 
     try:
         client = AsyncAnthropic(api_key=api_key)
     except Exception as exc:
         logger.error(f"{log_prefix} failed to init anthropic client: {exc}", exc_info=True)
-        return False, ""
+        return False, "", recorded_actions
 
     system_blocks = [
         {
@@ -264,7 +276,7 @@ async def run_agent_loop(
         initial_shot = await take_screenshot_b64(page)
     except Exception as exc:
         logger.error(f"{log_prefix} initial screenshot failed: {exc}", exc_info=True)
-        return False, ""
+        return False, "", recorded_actions
 
     messages: list[dict[str, Any]] = [
         {
@@ -363,6 +375,10 @@ async def run_agent_loop(
                     )
                     continue
 
+                # Record the action for replay (skip pure observers).
+                if action not in NON_STATEFUL_ACTIONS:
+                    recorded_actions.append(dict(tu.input))
+
                 # After the action, the airline may have opened a new tab.
                 # Re-resolve the active page so the next screenshot reflects
                 # whichever tab is now driving the booking flow.
@@ -394,9 +410,9 @@ async def run_agent_loop(
         ok = await asyncio.wait_for(_run(), timeout=HARD_TIMEOUT_SECONDS)
     except asyncio.TimeoutError:
         logger.error(f"{log_prefix} hard timeout after {HARD_TIMEOUT_SECONDS}s")
-        return False, last_text
+        return False, last_text, recorded_actions
     except Exception as exc:
         logger.error(f"{log_prefix} loop crashed: {exc}", exc_info=True)
-        return False, last_text
+        return False, last_text, recorded_actions
 
-    return ok, last_text
+    return ok, last_text, recorded_actions

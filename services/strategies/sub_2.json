@@ -1,0 +1,147 @@
+{
+  "subscription_id": 2,
+  "airline_url": "https://www.southwest.com",
+  "viewport": [
+    1280,
+    800
+  ],
+  "recorded_at": "2026-04-28T12:21:23.086187+00:00",
+  "actions": [
+    {
+      "action": "left_click",
+      "coordinate": [
+        177,
+        343
+      ]
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        103,
+        399
+      ]
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        177,
+        416
+      ]
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        177,
+        416
+      ]
+    },
+    {
+      "action": "type",
+      "text": "ONT"
+    },
+    {
+      "action": "wait",
+      "duration": 2
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        161,
+        635
+      ]
+    },
+    {
+      "action": "key",
+      "text": "Escape"
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        461,
+        416
+      ]
+    },
+    {
+      "action": "type",
+      "text": "NYC"
+    },
+    {
+      "action": "wait",
+      "duration": 1
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        427,
+        478
+      ]
+    },
+    {
+      "action": "key",
+      "text": "Escape"
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        140,
+        518
+      ]
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        562,
+        703
+      ]
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        320,
+        740
+      ]
+    },
+    {
+      "action": "wait",
+      "duration": 3
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        631,
+        345
+      ]
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        1056,
+        345
+      ]
+    },
+    {
+      "action": "wait",
+      "duration": 2
+    },
+    {
+      "action": "scroll",
+      "coordinate": [
+        640,
+        400
+      ],
+      "scroll_direction": "down",
+      "scroll_amount": 3
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        1056,
+        537
+      ]
+    },
+    {
+      "action": "wait",
+      "duration": 2
+    }
+  ]
+}

@@ -72,7 +72,7 @@ async def fill_search_form(
     destination_iata: str,
     departure_date: str,
     departure_time: str,
-) -> bool:
+) -> tuple[bool, list[dict]]:
     """
     Fill the flight-search form on the currently-open airline page and submit it.
 
@@ -80,7 +80,8 @@ async def fill_search_form(
     but it is NOT used in the prompt at this step — the form does not know about
     individual flight times, only dates.
 
-    Returns True if the agent loop finished cleanly via end_turn.
+    Returns (ok, recorded_actions). `recorded_actions` is the ordered list of
+    actions that were executed during this stage, suitable for replay.
     """
     logger.info(
         f"[vision_search_agent] called | {origin_iata}→{destination_iata} on {departure_date} (time={departure_time})"
@@ -91,5 +92,5 @@ async def fill_search_form(
         destination=destination_iata,
         date=departure_date,
     )
-    ok, _ = await run_agent_loop(page, prompt, log_prefix="[vision_search_agent]")
-    return ok
+    ok, _, actions = await run_agent_loop(page, prompt, log_prefix="[vision_search_agent]")
+    return ok, actions

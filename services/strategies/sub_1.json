@@ -1,0 +1,78 @@
+{
+  "subscription_id": 1,
+  "airline_url": "https://www.flypobeda.ru",
+  "viewport": [
+    1280,
+    800
+  ],
+  "recorded_at": "2026-04-28T12:10:55.901680+00:00",
+  "actions": [
+    {
+      "action": "left_click",
+      "coordinate": [
+        1197,
+        586
+      ]
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        447,
+        551
+      ]
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        558,
+        625
+      ]
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        799,
+        551
+      ]
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        967,
+        636
+      ]
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        1014,
+        615
+      ]
+    },
+    {
+      "action": "key",
+      "text": "Escape"
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        1161,
+        301
+      ]
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        1161,
+        301
+      ]
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        1211,
+        154
+      ]
+    }
+  ]
+}
