@@ -32,7 +32,7 @@ SCREENSHOTS_DIR = Path(os.environ.get("SCREENSHOTS_DIR") or _DEFAULT_SCREENSHOTS
 # to the airline URL, replays the saved actions with the given inter-action
 # delay, then runs the verifier. First verified success wins. If all attempts
 # fail to verify, the strategy is discarded and we fall back to the LLM path.
-REPLAY_RETRY_DELAYS = [2.5, 10.0, 15.0]
+REPLAY_RETRY_DELAYS = [2.5, 10.0, 20.0]
 
 
 async def _save_final_screenshot(
@@ -85,7 +85,9 @@ async def check_price(subscription_id: int) -> None:
     with SessionLocal() as db:
         sub = get_subscription(db, subscription_id)
         if sub is None:
-            logger.warning(f"[price_checker] subscription id={subscription_id} not found")
+            logger.warning(
+                f"[price_checker] subscription id={subscription_id} not found"
+            )
             raise SubscriptionNotFoundError(subscription_id)
 
         airline_name = sub.airline
@@ -100,13 +102,17 @@ async def check_price(subscription_id: int) -> None:
 
         airline_url = get_airline_url_by_name(db, airline_name)
         if airline_url is None:
-            logger.info(f"[price_checker] airline '{airline_name}' not in table — calling agent")
+            logger.info(
+                f"[price_checker] airline '{airline_name}' not in table — calling agent"
+            )
             airline_url = await find_airline_url_online(airline_name)
             if airline_url:
                 save_airline(db, airline_name, airline_url)
                 logger.info(f"[price_checker] saved '{airline_name}' → {airline_url}")
             else:
-                logger.warning(f"[price_checker] no URL for '{airline_name}' — skipping")
+                logger.warning(
+                    f"[price_checker] no URL for '{airline_name}' — skipping"
+                )
                 return
         else:
             logger.info(f"[price_checker] airline '{airline_name}' → url={airline_url}")
@@ -206,7 +212,9 @@ async def check_price(subscription_id: int) -> None:
                         departure_time=departure_time,
                     )
                     if not stage_a_ok:
-                        logger.warning(f"[price_checker] sub id={subscription_id} stage A failed")
+                        logger.warning(
+                            f"[price_checker] sub id={subscription_id} stage A failed"
+                        )
                         return
 
                     stage_b_ok, no_match, actions_b = await pick_flight(
@@ -225,7 +233,9 @@ async def check_price(subscription_id: int) -> None:
                         )
                         return
                     if not stage_b_ok:
-                        logger.warning(f"[price_checker] sub id={subscription_id} stage B failed")
+                        logger.warning(
+                            f"[price_checker] sub id={subscription_id} stage B failed"
+                        )
                         return
 
                     await _save_final_screenshot(
