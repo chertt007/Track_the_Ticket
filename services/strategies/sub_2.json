@@ -5,7 +5,7 @@
     1280,
     800
   ],
-  "recorded_at": "2026-04-28T12:21:23.086187+00:00",
+  "recorded_at": "2026-04-28T14:52:45.709184+00:00",
   "actions": [
     {
       "action": "left_click",
@@ -24,15 +24,15 @@
     {
       "action": "left_click",
       "coordinate": [
-        177,
-        416
+        161,
+        415
       ]
     },
     {
       "action": "left_click",
       "coordinate": [
         177,
-        416
+        415
       ]
     },
     {
@@ -41,7 +41,7 @@
     },
     {
       "action": "wait",
-      "duration": 2
+      "duration": 1
     },
     {
       "action": "left_click",
@@ -51,6 +51,39 @@
       ]
     },
     {
+      "action": "left_click",
+      "coordinate": [
+        161,
+        635
+      ]
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        177,
+        415
+      ]
+    },
+    {
+      "action": "type",
+      "text": "ONT"
+    },
+    {
+      "action": "wait",
+      "duration": 1
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        73,
+        635
+      ]
+    },
+    {
+      "action": "key",
+      "text": "Escape"
+    },
+    {
       "action": "key",
       "text": "Escape"
     },
@@ -58,7 +91,7 @@
       "action": "left_click",
       "coordinate": [
         461,
-        416
+        415
       ]
     },
     {
@@ -75,6 +108,10 @@
         427,
         478
       ]
+    },
+    {
+      "action": "key",
+      "text": "Escape"
     },
     {
       "action": "key",
@@ -99,24 +136,21 @@
       "coordinate": [
         320,
         740
-      ]
-    },
-    {
-      "action": "wait",
-      "duration": 3
+      ],
+      "wait_after_ms": 20000
     },
     {
       "action": "left_click",
       "coordinate": [
         631,
-        345
+        349
       ]
     },
     {
       "action": "left_click",
       "coordinate": [
-        1056,
-        345
+        1055,
+        346
       ]
     },
     {
@@ -129,14 +163,23 @@
         640,
         400
       ],
+      "scroll_direction": "up",
+      "scroll_amount": 5
+    },
+    {
+      "action": "scroll",
+      "coordinate": [
+        640,
+        400
+      ],
       "scroll_direction": "down",
-      "scroll_amount": 3
+      "scroll_amount": 5
     },
     {
       "action": "left_click",
       "coordinate": [
-        1056,
-        537
+        1055,
+        643
       ]
     },
     {

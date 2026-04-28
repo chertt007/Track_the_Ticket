@@ -5,7 +5,7 @@
     1280,
     800
   ],
-  "recorded_at": "2026-04-28T12:10:55.901680+00:00",
+  "recorded_at": "2026-04-28T15:29:12.995949+00:00",
   "actions": [
     {
       "action": "left_click",
@@ -17,21 +17,14 @@
     {
       "action": "left_click",
       "coordinate": [
-        447,
-        551
+        1239,
+        772
       ]
     },
     {
       "action": "left_click",
       "coordinate": [
-        558,
-        625
-      ]
-    },
-    {
-      "action": "left_click",
-      "coordinate": [
-        799,
+        840,
         551
       ]
     },
@@ -41,6 +34,10 @@
         967,
         636
       ]
+    },
+    {
+      "action": "key",
+      "text": "Escape"
     },
     {
       "action": "left_click",
@@ -56,16 +53,35 @@
     {
       "action": "left_click",
       "coordinate": [
-        1161,
+        200,
+        400
+      ]
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        439,
         301
       ]
     },
     {
       "action": "left_click",
       "coordinate": [
-        1161,
+        558,
+        375
+      ]
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        1160,
         301
       ]
+    },
+    {
+      "action": "wait",
+      "duration": 2,
+      "wait_after_ms": 20000
     },
     {
       "action": "left_click",

@@ -8,9 +8,12 @@ we just check that the page the replay landed on shows that exact time.
 
 Single Anthropic call, no Computer-Use tool, no agent loop. ~$0.01–0.05.
 """
+import base64
 import logging
 import os
 import re
+from pathlib import Path
+from typing import Optional
 
 from anthropic import AsyncAnthropic
 from playwright.async_api import Page
@@ -20,20 +23,24 @@ from agents.vision_common import MODEL, resolve_active_page, take_screenshot_b64
 logger = logging.getLogger(__name__)
 
 
-VERIFY_PROMPT = """You are looking at a screenshot of an airline's website
-that should display flight search results or fare details for a specific flight.
+VERIFY_PROMPT = """You are looking at a screenshot of an airline's website.
 
-Decide whether the screenshot CLEARLY shows a flight with all of:
-  - Route: {origin} → {destination}
-  - Date: {date}
-  - Departure time: {time}
+Question: Is the departure time {time} clearly visible on this page,
+attached to a flight (i.e. as a flight schedule entry — not just a generic
+clock or unrelated number)?
 
-The departure time must be visible on the page (HH:MM format or equivalent,
-e.g. "20:35"), attached to a flight that matches the route and date.
+Accept any time format that means the same hour and minute, for example:
+  "06:10", "6:10", "6:10 AM", "06:10 AM".
+
+If the screenshot is dominated by a popup / modal / cookie banner that
+hides flight content, answer NO.
+
+Other details (city codes, exact route, date) are NOT required for this
+check — they may or may not be visible. Focus only on the departure time.
 
 Reply with EXACTLY one word, on a single line:
-  - YES   if such a flight is visible on the screenshot.
-  - NO    otherwise.
+  - YES   — a flight at {time} is visible.
+  - NO    — otherwise.
 
 Do not explain. Do not add anything else."""
 
@@ -44,10 +51,17 @@ async def verify_departure_time_visible(
     destination: str,
     date: str,
     time: str,
+    debug_screenshot_path: Optional[Path] = None,
 ) -> bool:
     """
     Single-shot LLM check: does the current page show a flight at the
     requested departure time on the requested route and date?
+
+    Args:
+        debug_screenshot_path: if given, the exact PNG that was sent to
+            the model is also written to this path. Useful for debugging
+            disagreements between what a human sees on screen and what
+            the verifier judged.
 
     Returns False on any error (conservative — uncertainty counts as
     not-verified, so the caller can retry with a longer delay or fall
@@ -64,6 +78,16 @@ async def verify_departure_time_visible(
     except Exception as exc:
         logger.error(f"[verifier] screenshot failed: {exc}", exc_info=True)
         return False
+
+    # Persist the exact frame the model is judging — caller can inspect it
+    # afterwards if the verdict disagrees with what was on screen.
+    if debug_screenshot_path is not None:
+        try:
+            debug_screenshot_path.parent.mkdir(parents=True, exist_ok=True)
+            debug_screenshot_path.write_bytes(base64.standard_b64decode(screenshot_b64))
+            logger.info(f"[verifier] debug screenshot → {debug_screenshot_path}")
+        except Exception as exc:
+            logger.warning(f"[verifier] could not save debug screenshot: {exc}")
 
     prompt = VERIFY_PROMPT.format(
         origin=origin, destination=destination, date=date, time=time

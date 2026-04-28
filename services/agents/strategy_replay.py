@@ -138,5 +138,17 @@ async def replay_strategy(
                 exc_info=True,
             )
             return False
+
+        # Per-step extra wait, baked into the recorded action by the agent
+        # that produced it (e.g. the search-button click at the end of Stage A
+        # carries a 20s wait so the results page has time to render).
+        wait_after_ms = action_input.get("wait_after_ms")
+        if wait_after_ms:
+            extra_s = wait_after_ms / 1000.0
+            logger.info(
+                f"[strategy] step {i}/{len(actions)} extra wait_after_ms={wait_after_ms} → sleeping {extra_s}s"
+            )
+            await asyncio.sleep(extra_s)
+
         await asyncio.sleep(delay_between_actions)
     return True

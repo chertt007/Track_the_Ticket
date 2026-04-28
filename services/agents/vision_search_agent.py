@@ -12,6 +12,14 @@ from agents.vision_common import run_agent_loop
 
 logger = logging.getLogger(__name__)
 
+# Extra pause (in milliseconds) recorded into the strategy's last action.
+# Stage A always ends on the search-button click, which navigates to the
+# results page. Replaying that click and immediately moving on lands the
+# next step on a half-loaded page — the verifier then says NO and we burn
+# a retry. This tag tells the replay loop to hold here long enough for
+# results to render, regardless of network-activity heuristics.
+POST_SUBMIT_WAIT_MS = 20_000
+
 
 SYSTEM_PROMPT = """You are a browser automation agent. The airline's website is already open in the browser.
 Your only job is to fill out the flight-search form for a ONE-WAY flight.
@@ -93,4 +101,10 @@ async def fill_search_form(
         date=departure_date,
     )
     ok, _, actions = await run_agent_loop(page, prompt, log_prefix="[vision_search_agent]")
+
+    # Tag the final action (the search-button click) so replay holds long
+    # enough for the results page to render before the next step fires.
+    if ok and actions:
+        actions[-1]["wait_after_ms"] = POST_SUBMIT_WAIT_MS
+
     return ok, actions
