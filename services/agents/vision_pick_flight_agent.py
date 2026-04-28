@@ -62,7 +62,7 @@ DO NOT:
 - Fill any personal data (name, email, phone, document, payment details).
 - Add extras (seat selection, insurance, meals, lounge, transfers).
 - Click through to a payment / checkout step.
-- Change the trip type, dates, or airports.
+- Change the search dates or airports.
 
 WHEN DONE — reply with one of these EXACTLY:
 - "Done"               — list view OR fare page shows the correct price.

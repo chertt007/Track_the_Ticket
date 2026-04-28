@@ -25,12 +25,25 @@ VIEWPORT_WIDTH = 1280
 VIEWPORT_HEIGHT = 800
 
 MAX_STEPS = 30
-HARD_TIMEOUT_SECONDS = 300
+HARD_TIMEOUT_SECONDS = 500
 MAX_TOKENS_PER_TURN = 4096
 
 # Throttle the loop to give us a wider safety margin against Tier 1
 # rate limits (RPM and ITPM). Cheap insurance, ~45s extra over a 30-step run.
 PAUSE_BETWEEN_STEPS = 1.5
+
+# Keep `httpx` and `anthropic` at INFO so the useful one-liners stay visible:
+#   httpx          → "HTTP Request: POST https://api.anthropic.com/... 200 OK"
+#   anthropic      → "[FUNCTION: request] anthropic._base_client request_id=..."
+# Cap the rest at WARNING — these emit full request/response bodies (base64
+# screenshots) at INFO/DEBUG, which floods the terminal with garbage:
+#   httpcore       → low-level HTTP body dumps
+#   openinference  → OTEL spans capturing model inputs/outputs as attributes
+#   openai         → SDK chatter we don't directly use here
+for _noisy_info in ("httpx", "anthropic"):
+    logging.getLogger(_noisy_info).setLevel(logging.INFO)
+for _noisy_warn in ("httpcore", "openinference", "openai"):
+    logging.getLogger(_noisy_warn).setLevel(logging.WARNING)
 
 
 # xdotool key names → Playwright key names. Only entries that actually differ.
