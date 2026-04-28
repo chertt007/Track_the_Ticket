@@ -94,22 +94,35 @@ def discard_strategy(subscription_id: int) -> None:
     logger.info(f"[strategy] discarded sub_{subscription_id}.json")
 
 
-async def replay_strategy(page: Page, strategy: dict) -> bool:
+async def replay_strategy(
+    page: Page,
+    strategy: dict,
+    delay_between_actions: float = REPLAY_DELAY_BETWEEN_ACTIONS,
+) -> bool:
     """
     Execute the saved actions on the currently-open page in order, with a
-    fixed pause between steps. Re-resolves the active page after every
-    action so we follow new tabs the same way the LLM loop does.
+    pause between steps. Re-resolves the active page after every action
+    so we follow new tabs the same way the LLM loop does.
 
-    Returns True if every action ran without raising, False otherwise.
-    A True return does NOT prove the right thing happened on screen —
-    the caller should still inspect the final screenshot.
+    Args:
+        delay_between_actions: seconds to wait after each action.
+            Caller may pass a larger value on retry attempts when slow
+            networks or heavy SPAs are suspected.
+
+    Returns:
+        True  if every action ran without raising — does NOT prove we
+              landed on the right page; caller should verify visually
+              or via a verifier agent.
+        False on any execution error.
     """
     actions = strategy.get("actions", [])
     if not actions:
         logger.warning("[strategy] empty action list")
         return False
 
-    logger.info(f"[strategy] replaying {len(actions)} steps")
+    logger.info(
+        f"[strategy] replaying {len(actions)} steps (delay between actions: {delay_between_actions}s)"
+    )
     logger.info(f"[strategy] settling for {INITIAL_REPLAY_DELAY}s before first action…")
     await asyncio.sleep(INITIAL_REPLAY_DELAY)
     current_page = page
@@ -125,5 +138,5 @@ async def replay_strategy(page: Page, strategy: dict) -> bool:
                 exc_info=True,
             )
             return False
-        await asyncio.sleep(REPLAY_DELAY_BETWEEN_ACTIONS)
+        await asyncio.sleep(delay_between_actions)
     return True
