@@ -5,15 +5,8 @@
     1280,
     800
   ],
-  "recorded_at": "2026-04-28T15:29:12.995949+00:00",
+  "recorded_at": "2026-05-02T09:46:53.794598+00:00",
   "actions": [
-    {
-      "action": "left_click",
-      "coordinate": [
-        1197,
-        586
-      ]
-    },
     {
       "action": "left_click",
       "coordinate": [
@@ -24,51 +17,76 @@
     {
       "action": "left_click",
       "coordinate": [
-        840,
-        551
+        1197,
+        585
+      ]
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        1197,
+        585
+      ]
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        435,
+        511
+      ]
+    },
+    {
+      "action": "type",
+      "text": "LED"
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        417,
+        585
+      ]
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        597,
+        511
+      ]
+    },
+    {
+      "action": "wait",
+      "duration": 1
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        967,
+        387
+      ]
+    },
+    {
+      "action": "key",
+      "text": "Escape"
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        967,
+        387
+      ]
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        662,
+        615
       ]
     },
     {
       "action": "left_click",
       "coordinate": [
         967,
-        636
-      ]
-    },
-    {
-      "action": "key",
-      "text": "Escape"
-    },
-    {
-      "action": "left_click",
-      "coordinate": [
-        1014,
-        615
-      ]
-    },
-    {
-      "action": "key",
-      "text": "Escape"
-    },
-    {
-      "action": "left_click",
-      "coordinate": [
-        200,
-        400
-      ]
-    },
-    {
-      "action": "left_click",
-      "coordinate": [
-        439,
-        301
-      ]
-    },
-    {
-      "action": "left_click",
-      "coordinate": [
-        558,
-        375
+        387
       ]
     },
     {

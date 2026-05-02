@@ -38,7 +38,7 @@ VERIFIER_DEBUG_DIR = SCREENSHOTS_DIR / "verifier"
 # to the airline URL, replays the saved actions with the given inter-action
 # delay, then runs the verifier. First verified success wins. If all attempts
 # fail to verify, the strategy is discarded and we fall back to the LLM path.
-REPLAY_RETRY_DELAYS = [2.5, 10.0, 20.0]
+REPLAY_RETRY_DELAYS = [2.5, 4, 7.0]
 
 
 @dataclass(frozen=True)
