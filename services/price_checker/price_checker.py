@@ -14,13 +14,23 @@ from agents.strategy_replay import (
     replay_strategy,
     save_strategy,
 )
-from agents.strategy_verifier import verify_departure_time_visible
-from agents.vision_common import VIEWPORT_HEIGHT, VIEWPORT_WIDTH, resolve_active_page
+from agents.strategy_verifier import verify_and_extract_price
+from agents.vision_common import (
+    VIEWPORT_HEIGHT,
+    VIEWPORT_WIDTH,
+    PriceResult,
+    resolve_active_page,
+)
 from agents.vision_pick_flight_agent import pick_flight
 from agents.vision_search_agent import fill_search_form
 from common.database import SessionLocal
 from common.exceptions import SubscriptionNotFoundError
-from common.queries import get_airline_url_by_name, get_subscription, save_airline
+from common.queries import (
+    get_airline_url_by_name,
+    get_subscription,
+    save_airline,
+    save_price_check,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -139,6 +149,44 @@ async def _save_final_screenshot(page: Page, job: _Job, via: str) -> Path:
     return screenshot_path
 
 
+async def _save_check_result(
+    page: Page, job: _Job, via: str, price: Optional[PriceResult]
+) -> None:
+    """
+    Persist the outcome of a successful price-check:
+      1. JPEG of the final page on disk (for future Telegram delivery).
+      2. A row in `price_checks` with whatever the verifier read for
+         price — amount/currency are NULL when the model could not
+         resolve a price for our flight.
+
+    Price is passed in (not extracted here) because the unified verifier
+    already produced it during landing-page verification on the same
+    screenshot. DB write swallows its own exceptions — a price-check
+    pipeline must not be killed by a transient SQLite hiccup.
+    """
+    screenshot_path = await _save_final_screenshot(page, job, via)
+
+    amount = price.amount if price else None
+    currency = price.currency if price else None
+
+    try:
+        with SessionLocal() as db:
+            save_price_check(
+                db,
+                subscription_id=job.subscription_id,
+                amount=amount,
+                currency=currency,
+                via=via,
+                screenshot_path=str(screenshot_path),
+            )
+    except Exception as exc:
+        logger.error(
+            f"[price_checker] sub id={job.subscription_id} "
+            f"failed to persist price_check row: {exc}",
+            exc_info=True,
+        )
+
+
 async def _try_replay_with_retries(
     browser: Browser, strategy: dict, job: _Job
 ) -> bool:
@@ -172,17 +220,17 @@ async def _try_replay_with_retries(
                 VERIFIER_DEBUG_DIR
                 / f"sub{job.subscription_id}_attempt{attempt}_{delay}s_{stamp}.png"
             )
-            verified = await verify_departure_time_visible(
+            result = await verify_and_extract_price(
                 page=page,
-                origin=job.origin,
-                destination=job.destination,
-                date=job.departure_date,
                 time=job.departure_time,
                 debug_screenshot_path=debug_screenshot_path,
             )
-            if verified:
-                await _save_final_screenshot(
-                    page, job, via=f"replay/attempt{attempt}/{delay}s"
+            if result.verified:
+                await _save_check_result(
+                    page,
+                    job,
+                    via=f"replay/attempt{attempt}/{delay}s",
+                    price=result.price,
                 )
                 return True
 
@@ -233,7 +281,26 @@ async def _run_llm_pipeline_and_record(browser: Browser, job: _Job) -> None:
             logger.warning(f"[price_checker] sub id={job.subscription_id} stage B failed")
             return
 
-        await _save_final_screenshot(page, job, via="llm")
+        # Same Sonnet call as in the replay path — sanity-check we're on
+        # the right flight and harvest the price for our row. If the LLM
+        # pipeline thought it succeeded but the verifier disagrees, that's
+        # noteworthy: log loudly, save NULL price, keep the screenshot.
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        debug_screenshot_path = (
+            VERIFIER_DEBUG_DIR / f"sub{job.subscription_id}_llm_{stamp}.png"
+        )
+        result = await verify_and_extract_price(
+            page=page,
+            time=job.departure_time,
+            debug_screenshot_path=debug_screenshot_path,
+        )
+        if not result.verified:
+            logger.warning(
+                f"[price_checker] sub id={job.subscription_id} "
+                "LLM pipeline finished but verifier said NO — saving with NULL price"
+            )
+
+        await _save_check_result(page, job, via="llm", price=result.price)
 
         recorded_actions = actions_a + actions_b
         if recorded_actions:

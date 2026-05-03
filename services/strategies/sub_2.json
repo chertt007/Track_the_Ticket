@@ -5,34 +5,38 @@
     1280,
     800
   ],
-  "recorded_at": "2026-04-28T14:52:45.709184+00:00",
+  "recorded_at": "2026-05-02T11:54:40.193944+00:00",
   "actions": [
     {
       "action": "left_click",
       "coordinate": [
         177,
-        343
+        387
       ]
+    },
+    {
+      "action": "wait",
+      "duration": 1
     },
     {
       "action": "left_click",
       "coordinate": [
         103,
-        399
+        444
       ]
     },
     {
       "action": "left_click",
       "coordinate": [
-        161,
-        415
+        136,
+        444
       ]
     },
     {
       "action": "left_click",
       "coordinate": [
         177,
-        415
+        461
       ]
     },
     {
@@ -47,41 +51,41 @@
       "action": "left_click",
       "coordinate": [
         161,
-        635
+        194
       ]
     },
     {
       "action": "left_click",
       "coordinate": [
-        161,
-        635
+        74,
+        333
       ]
     },
     {
       "action": "left_click",
       "coordinate": [
         177,
-        415
-      ]
-    },
-    {
-      "action": "type",
-      "text": "ONT"
-    },
-    {
-      "action": "wait",
-      "duration": 1
-    },
-    {
-      "action": "left_click",
-      "coordinate": [
-        73,
-        635
+        461
       ]
     },
     {
       "action": "key",
-      "text": "Escape"
+      "text": "ctrl+a"
+    },
+    {
+      "action": "type",
+      "text": "ONT"
+    },
+    {
+      "action": "wait",
+      "duration": 1
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        74,
+        194
+      ]
     },
     {
       "action": "key",
@@ -91,7 +95,7 @@
       "action": "left_click",
       "coordinate": [
         461,
-        415
+        461
       ]
     },
     {
@@ -105,13 +109,9 @@
     {
       "action": "left_click",
       "coordinate": [
-        427,
-        478
+        334,
+        315
       ]
-    },
-    {
-      "action": "key",
-      "text": "Escape"
     },
     {
       "action": "key",
@@ -121,21 +121,21 @@
       "action": "left_click",
       "coordinate": [
         140,
-        518
+        562
       ]
     },
     {
       "action": "left_click",
       "coordinate": [
-        562,
-        703
+        308,
+        748
       ]
     },
     {
       "action": "left_click",
       "coordinate": [
         320,
-        740
+        785
       ],
       "wait_after_ms": 20000
     },
@@ -143,19 +143,19 @@
       "action": "left_click",
       "coordinate": [
         631,
-        349
+        345
       ]
     },
     {
       "action": "left_click",
       "coordinate": [
         1055,
-        346
+        345
       ]
     },
     {
       "action": "wait",
-      "duration": 2
+      "duration": 3
     },
     {
       "action": "scroll",
@@ -165,6 +165,13 @@
       ],
       "scroll_direction": "up",
       "scroll_amount": 5
+    },
+    {
+      "action": "left_click",
+      "coordinate": [
+        1055,
+        42
+      ]
     },
     {
       "action": "scroll",
@@ -179,12 +186,12 @@
       "action": "left_click",
       "coordinate": [
         1055,
-        643
+        638
       ]
     },
     {
       "action": "wait",
-      "duration": 2
+      "duration": 3
     }
   ]
 }

@@ -1,9 +1,10 @@
 """Database query helpers — one place for all SELECT logic."""
 import logging
+from decimal import Decimal
 from typing import Optional
 from sqlalchemy.orm import Session
 
-from .db_models import Airline, Subscription
+from .db_models import Airline, PriceCheck, Subscription
 
 logger = logging.getLogger(__name__)
 
@@ -24,3 +25,29 @@ def save_airline(db: Session, name: str, url: str) -> None:
     db.add(Airline(airline_name=name, airline_url=url))
     db.commit()
     logger.info(f"[queries] saved airline '{name}' → {url}")
+
+
+def save_price_check(
+    db: Session,
+    subscription_id: int,
+    amount: Optional[Decimal],
+    currency: Optional[str],
+    via: str,
+    screenshot_path: str,
+) -> PriceCheck:
+    """Insert a price-check row. amount/currency may be NULL when the extractor failed."""
+    row = PriceCheck(
+        subscription_id=subscription_id,
+        amount=amount,
+        currency=currency,
+        via=via,
+        screenshot_path=screenshot_path,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    logger.info(
+        f"[queries] saved price_check sub={subscription_id} "
+        f"amount={amount} currency={currency} via={via}"
+    )
+    return row

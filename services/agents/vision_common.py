@@ -8,7 +8,9 @@ import asyncio
 import base64
 import logging
 import os
-from typing import Any
+from dataclasses import dataclass
+from decimal import Decimal
+from typing import Any, Optional
 
 from anthropic import AsyncAnthropic
 from playwright.async_api import Page
@@ -36,6 +38,20 @@ PAUSE_BETWEEN_STEPS = 1.5
 # recording a strategy for replay — replaying them is pointless and they
 # only inflate the action list.
 NON_STATEFUL_ACTIONS = {"screenshot", "cursor_position"}
+
+
+@dataclass(frozen=True)
+class PriceResult:
+    amount: Decimal
+    currency: str  # ISO-4217, e.g. "RUB"
+
+
+@dataclass(frozen=True)
+class VerificationResult:
+    """Combined output of strategy_verifier: did we land on the right page,
+    and if yes, what price did we read off it for the requested flight."""
+    verified: bool
+    price: Optional[PriceResult]
 
 # Keep `httpx` and `anthropic` at INFO so the useful one-liners stay visible:
 #   httpx          → "HTTP Request: POST https://api.anthropic.com/... 200 OK"
