@@ -1,43 +1,37 @@
 """
-Record-and-replay for vision agents — proof of concept.
+Record-and-replay for vision agents.
 
-Idea: after a successful LLM-driven price check we dump the executed action
-list to a JSON file keyed by subscription. Next time we run for that same
-subscription, we replay the saved action list deterministically — no LLM
-calls, near-zero cost.
+When a successful LLM-driven price check finishes, we persist the executed
+action list into the `strategies` table keyed by subscription. Next time
+we run for that same subscription we replay the saved actions deterministically
+— no LLM calls, near-zero cost.
 
-Layout: services/strategies/sub_<id>.json
-{
-  "subscription_id": 1,
-  "airline_url": "https://www.flypobeda.ru",
-  "viewport": [1280, 800],
-  "recorded_at": "2026-04-28T13:06:59+00:00",
-  "actions": [{"action": "left_click", "coordinate": [1239, 771]}, ...]
-}
+The public API (load / save / discard / replay) keeps the same signatures
+as before; only the storage backend changed from JSON files to SQLite.
 
 Limitations (intentionally not handled here):
   - Cookie banners / promo modals appear non-deterministically. If they
     differ between record and replay, clicks will land off-target.
   - Layout changes invalidate saved coordinates.
 
-On replay failure we delete the strategy file so the next run re-records.
+On replay failure the caller deletes the strategy via discard_strategy
+so the next run re-records via the LLM path.
 """
 import asyncio
-import json
 import logging
-import os
-from datetime import datetime, timezone
-from pathlib import Path
 from typing import Optional
 
 from playwright.async_api import Page
 
 from agents.vision_common import _execute_action, resolve_active_page
+from common.database import SessionLocal
+from common.queries import (
+    delete_strategy as _db_delete_strategy,
+    get_strategy as _db_get_strategy,
+    upsert_strategy as _db_upsert_strategy,
+)
 
 logger = logging.getLogger(__name__)
-
-_DEFAULT_STRATEGIES_DIR = Path(__file__).resolve().parent.parent / "strategies"
-STRATEGIES_DIR = Path(os.environ.get("STRATEGIES_DIR") or _DEFAULT_STRATEGIES_DIR)
 
 # Pause after each action during replay. Mirrors the natural cadence of the
 # LLM loop (action → screenshot → API call ≈ 3–5s) so the page has time to
@@ -51,20 +45,10 @@ REPLAY_DELAY_BETWEEN_ACTIONS = 2.5
 INITIAL_REPLAY_DELAY = 15.0
 
 
-def strategy_path(subscription_id: int) -> Path:
-    return STRATEGIES_DIR / f"sub_{subscription_id}.json"
-
-
 def load_strategy(subscription_id: int) -> Optional[dict]:
     """Return the saved strategy dict for this subscription, or None."""
-    path = strategy_path(subscription_id)
-    if not path.exists():
-        return None
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        logger.warning(f"[strategy] failed to read {path}: {exc}")
-        return None
+    with SessionLocal() as db:
+        return _db_get_strategy(db, subscription_id)
 
 
 def save_strategy(
@@ -72,26 +56,22 @@ def save_strategy(
     airline_url: str,
     viewport: tuple[int, int],
     actions: list[dict],
-) -> Path:
-    """Write a strategy file for this subscription. Returns the path."""
-    STRATEGIES_DIR.mkdir(parents=True, exist_ok=True)
-    payload = {
-        "subscription_id": subscription_id,
-        "airline_url": airline_url,
-        "viewport": list(viewport),
-        "recorded_at": datetime.now(timezone.utc).isoformat(),
-        "actions": actions,
-    }
-    path = strategy_path(subscription_id)
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
-    logger.info(f"[strategy] saved {len(actions)} steps → {path}")
-    return path
+) -> None:
+    """Insert/replace the strategy for this subscription."""
+    with SessionLocal() as db:
+        _db_upsert_strategy(
+            db=db,
+            subscription_id=subscription_id,
+            airline_url=airline_url,
+            viewport=viewport,
+            actions=actions,
+        )
 
 
 def discard_strategy(subscription_id: int) -> None:
-    """Remove the strategy file (e.g. after a replay failure)."""
-    strategy_path(subscription_id).unlink(missing_ok=True)
-    logger.info(f"[strategy] discarded sub_{subscription_id}.json")
+    """Remove the strategy row (e.g. after a replay failure)."""
+    with SessionLocal() as db:
+        _db_delete_strategy(db, subscription_id)
 
 
 async def replay_strategy(

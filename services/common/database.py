@@ -1,9 +1,13 @@
 import os
+from pathlib import Path
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-# In Docker the /data volume is mounted; locally the file lands next to run.py.
-_db_path = os.environ.get("DATABASE_PATH", "./tracktheticket.db")
+# All persistent .db files live in <project_root>/data/.
+# Resolve the path absolutely so it works regardless of the process cwd.
+_DEFAULT_DB_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "tracktheticket.db"
+_db_path = os.environ.get("DATABASE_PATH", str(_DEFAULT_DB_PATH))
 DATABASE_URL = f"sqlite:///{_db_path}"
 
 engine = create_engine(

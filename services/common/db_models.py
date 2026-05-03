@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, Numeric, String
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, Numeric, String, Text
 from .database import Base
 
 
@@ -51,3 +51,29 @@ class PriceCheck(Base):
     currency        = Column(String, nullable=True)
     via             = Column(String, nullable=False)
     screenshot_path = Column(String, nullable=False)
+
+
+class Strategy(Base):
+    """
+    Saved replay strategy for a subscription — the ordered list of
+    Computer-Use actions the LLM agent executed during the first
+    successful run. Replay path reads this table instead of calling
+    the LLM, so subsequent price checks for the same subscription
+    cost ~$0 in tokens.
+
+    `actions_json` stores the action list as a JSON blob. We always
+    read/write it as one ordered list, never query individual actions,
+    so normalising to a separate table would only add joins for nothing.
+
+    One strategy per subscription (UNIQUE on subscription_id) — re-records
+    overwrite via UPSERT.
+    """
+    __tablename__ = "strategies"
+
+    id              = Column(Integer, primary_key=True, index=True)
+    subscription_id = Column(Integer, ForeignKey("subscriptions.id"), unique=True, nullable=False, index=True)
+    airline_url     = Column(String, nullable=False)
+    viewport_w      = Column(Integer, nullable=False)
+    viewport_h      = Column(Integer, nullable=False)
+    actions_json    = Column(Text, nullable=False)
+    recorded_at     = Column(DateTime, default=datetime.utcnow, nullable=False)
