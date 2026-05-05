@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -49,6 +50,11 @@ VERIFIER_DEBUG_DIR = SCREENSHOTS_DIR / "verifier"
 # delay, then runs the verifier. First verified success wins. If all attempts
 # fail to verify, the strategy is discarded and we fall back to the LLM path.
 REPLAY_RETRY_DELAYS = [2.5, 4, 7.0]
+
+# Screenshots are user-facing artefacts (Telegram messages, history view) but
+# only need to live as long as a person might want to reopen them. After that
+# the row in `price_checks` carries the price forever; the JPEG is purged.
+SCREENSHOT_RETENTION_DAYS = 7
 
 
 @dataclass(frozen=True)
@@ -127,6 +133,45 @@ async def _open_fresh_page(browser: Browser, url: str) -> tuple[BrowserContext, 
     page = await context.new_page()
     await page.goto(url, wait_until="domcontentloaded")
     return context, page
+
+
+def _prune_old_screenshots(retention_days: int = SCREENSHOT_RETENTION_DAYS) -> None:
+    """
+    Delete files under SCREENSHOTS_DIR (and the verifier/ subfolder) older than
+    `retention_days` based on mtime. The matching `price_checks` rows are kept
+    forever — only the on-disk artefact is purged.
+
+    Opportunistically called at the start of every `check_price` so we don't
+    need a separate cron. The cost is one recursive listdir, negligible against
+    a price-check that takes minutes.
+
+    Per-file errors are swallowed so a single locked/missing file can't break
+    a price-check.
+    """
+    if not SCREENSHOTS_DIR.exists():
+        return
+
+    cutoff = time.time() - retention_days * 86400
+    deleted_count = 0
+    freed_bytes = 0
+    for entry in SCREENSHOTS_DIR.rglob("*"):
+        if not entry.is_file():
+            continue
+        try:
+            if entry.stat().st_mtime >= cutoff:
+                continue
+            size = entry.stat().st_size
+            entry.unlink()
+            deleted_count += 1
+            freed_bytes += size
+        except OSError as exc:
+            logger.warning(f"[price_checker] could not prune {entry}: {exc}")
+
+    if deleted_count:
+        logger.info(
+            f"[price_checker] pruned {deleted_count} screenshot(s) older than "
+            f"{retention_days}d, freed {freed_bytes / 1024:.1f} KB"
+        )
 
 
 async def _save_final_screenshot(page: Page, job: _Job, via: str) -> Path:
@@ -332,6 +377,8 @@ async def check_price(subscription_id: int) -> None:
     Raises:
         SubscriptionNotFoundError: if no subscription exists with this id.
     """
+    _prune_old_screenshots()
+
     job = await _resolve_job(subscription_id)
     if job is None:
         return
