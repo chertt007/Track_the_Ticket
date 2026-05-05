@@ -49,6 +49,103 @@ export const cardStyles = {
     display: 'block',
   } as SxProps<Theme>,
 
+  // ── Last check (price + screenshot thumbnail) ──────────────────────────
+  lastCheckBox: {
+    display: 'flex',
+    flexDirection: { xs: 'row', md: 'row' },
+    alignItems: 'center',
+    gap: 1.5,
+    px: { xs: 0, md: 2 },
+    minWidth: { xs: 'auto', md: 220 },
+    flexShrink: 0,
+  } as SxProps<Theme>,
+
+  priceBox: {
+    display: 'flex',
+    flexDirection: 'column',
+    minWidth: 0,
+  } as SxProps<Theme>,
+
+  priceText: {
+    fontWeight: 700,
+    color: berryPalette.berry,
+    fontSize: { xs: '1rem', sm: '1.1rem' },
+    lineHeight: 1.2,
+    whiteSpace: 'nowrap',
+  } as SxProps<Theme>,
+
+  pricePlaceholder: {
+    color: alpha(berryPalette.berry, 0.45),
+    fontStyle: 'italic',
+    fontSize: '0.85rem',
+  } as SxProps<Theme>,
+
+  thumbnailButton: {
+    p: 0,
+    borderRadius: 2,
+    overflow: 'hidden',
+    border: `1px solid ${alpha(berryPalette.rose, 0.5)}`,
+    boxShadow: `0 4px 14px ${alpha(berryPalette.berry, 0.15)}`,
+    transition: 'transform 0.18s ease, box-shadow 0.18s ease',
+    '&:hover': {
+      transform: 'scale(1.03)',
+      boxShadow: `0 8px 22px ${alpha(berryPalette.berry, 0.25)}`,
+    },
+  } as SxProps<Theme>,
+
+  thumbnailImg: {
+    display: 'block',
+    width: { xs: 96, sm: 120, md: 140 },
+    height: { xs: 64, sm: 80, md: 92 },
+    objectFit: 'cover',
+  } as SxProps<Theme>,
+
+  // ── Lightbox (full-screen screenshot preview) ──────────────────────────
+  lightboxPaper: {
+    background: 'transparent',
+    boxShadow: 'none',
+    overflow: 'visible',
+    m: { xs: 1, sm: 2 },
+    maxWidth: '95vw',
+    maxHeight: '95vh',
+  } as SxProps<Theme>,
+
+  lightboxBackdrop: {
+    background: alpha(berryPalette.berry, 0.7),
+    backdropFilter: 'blur(8px)',
+  } as SxProps<Theme>,
+
+  lightboxContent: {
+    position: 'relative',
+    p: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  } as SxProps<Theme>,
+
+  lightboxImg: {
+    display: 'block',
+    maxWidth: '95vw',
+    maxHeight: '90vh',
+    width: 'auto',
+    height: 'auto',
+    borderRadius: 12,
+    boxShadow: `0 20px 60px ${alpha(berryPalette.berry, 0.45)}`,
+    cursor: 'zoom-out',
+  } as SxProps<Theme>,
+
+  lightboxCloseButton: {
+    position: 'absolute',
+    top: { xs: 8, sm: 12 },
+    right: { xs: 8, sm: 12 },
+    color: '#fff',
+    background: alpha('#000', 0.4),
+    backdropFilter: 'blur(6px)',
+    '&:hover': {
+      background: alpha('#000', 0.6),
+    },
+  } as SxProps<Theme>,
+
   checkButton: {
     color: berryPalette.raspberry,
     background: alpha(berryPalette.rose, 0.15),

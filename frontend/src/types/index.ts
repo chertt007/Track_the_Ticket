@@ -13,7 +13,8 @@ export interface Subscription {
   isActive: boolean
   lastCheckedAt: string | null
   lastPrice: number | null
-  currency: string
+  currency: string | null
+  lastScreenshotUrl: string | null
 }
 
 export interface PriceHistory {

@@ -17,6 +17,8 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff'
 import FlightLandIcon from '@mui/icons-material/FlightLand'
 import LuggageIcon from '@mui/icons-material/Luggage'
+import CloseIcon from '@mui/icons-material/Close'
+import ButtonBase from '@mui/material/ButtonBase'
 import { useNavigate } from 'react-router-dom'
 import { useT } from '../hooks/useT'
 import { useLocale } from '../hooks/useLocale'
@@ -38,6 +40,7 @@ export default function SubscriptionCard({ subscription: sub }: Props) {
   const isChecking = checkingId === sub.id
 
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
 
   const handleCheck = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -56,6 +59,17 @@ export default function SubscriptionCard({ subscription: sub }: Props) {
   }
 
   const handleCancelDelete = () => setConfirmOpen(false)
+
+  const handleThumbnailClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setLightboxOpen(true)
+  }
+
+  const handleLightboxClose = () => setLightboxOpen(false)
+
+  const formattedPrice = sub.lastPrice !== null && sub.currency
+    ? `${sub.lastPrice.toLocaleString(locale)} ${sub.currency}`
+    : null
 
   const formattedDate = sub.departureDate !== '—'
     ? new Date(sub.departureDate).toLocaleDateString(locale, {
@@ -109,6 +123,27 @@ export default function SubscriptionCard({ subscription: sub }: Props) {
         </Typography>
       </Box>
 
+      {/* ── Last check (price + screenshot thumbnail) ──────────────────── */}
+      <Box sx={s.lastCheckBox}>
+        <Box sx={s.priceBox}>
+          {formattedPrice ? (
+            <Typography sx={s.priceText}>{formattedPrice}</Typography>
+          ) : (
+            <Typography sx={s.pricePlaceholder}>—</Typography>
+          )}
+        </Box>
+        {sub.lastScreenshotUrl && (
+          <ButtonBase onClick={handleThumbnailClick} sx={s.thumbnailButton}>
+            <Box
+              component="img"
+              src={sub.lastScreenshotUrl}
+              alt={t('lastChecked')}
+              sx={s.thumbnailImg}
+            />
+          </ButtonBase>
+        )}
+      </Box>
+
       {/* ── Actions ──────────────────────────────────────────────────────── */}
       <Box sx={s.actionBox}>
         <Tooltip title={isChecking ? t('checking') : t('checkNow')}>
@@ -126,6 +161,31 @@ export default function SubscriptionCard({ subscription: sub }: Props) {
           </IconButton>
         </Tooltip>
       </Box>
+
+      {/* ── Lightbox (full-screen screenshot) ──────────────────────────── */}
+      {sub.lastScreenshotUrl && (
+        <Dialog
+          open={lightboxOpen}
+          onClose={handleLightboxClose}
+          onClick={e => e.stopPropagation()}
+          PaperProps={{ sx: s.lightboxPaper }}
+          BackdropProps={{ sx: s.lightboxBackdrop }}
+          maxWidth={false}
+        >
+          <DialogContent sx={s.lightboxContent}>
+            <Box
+              component="img"
+              src={sub.lastScreenshotUrl}
+              alt={t('lastChecked')}
+              onClick={handleLightboxClose}
+              sx={s.lightboxImg}
+            />
+            <IconButton onClick={handleLightboxClose} sx={s.lightboxCloseButton}>
+              <CloseIcon />
+            </IconButton>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* ── Delete confirm dialog ──────────────────────────────────────── */}
       <Dialog

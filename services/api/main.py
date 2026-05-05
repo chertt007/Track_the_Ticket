@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
+from pathlib import Path
+from typing import Optional
 
 from common.logging_config import setup_logging
 setup_logging()
@@ -19,14 +21,17 @@ logger = logging.getLogger(__name__)
 
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from common.database import engine, get_db
-from common.db_models import Base, Subscription
+from common.db_models import Base, PriceCheck, Subscription
 from common.exceptions import SubscriptionNotFoundError
+from common.queries import get_latest_price_check
 from link_parser import fetch_parsed_ticket
 from price_checker import check_price
+from price_checker.price_checker import SCREENSHOTS_DIR
 from schemas import SubscriptionCreate, SubscriptionOut  # noqa: F401
 
 # Create tables on startup if they don't exist yet
@@ -43,27 +48,59 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Static mount so the frontend can request final-page screenshots directly
+# (`<img src="{API_URL}/screenshots/<file>.jpg">`). Files are pruned by
+# the price-checker's retention policy, so the URL may 404 — the frontend
+# is expected to handle that gracefully.
+SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/screenshots", StaticFiles(directory=str(SCREENSHOTS_DIR)), name="screenshots")
+
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _sub_to_dict(sub: Subscription) -> dict:
-    """Map SQLAlchemy Subscription → dict the frontend expects."""
+def _sub_to_dict(sub: Subscription, latest: Optional[PriceCheck] = None) -> dict:
+    """
+    Map SQLAlchemy Subscription → dict the frontend expects.
+
+    `latest` is the most recent row from `price_checks` for this subscription,
+    or None if the subscription has never been checked. We surface its
+    timestamp/amount/currency directly on the card, plus a relative URL
+    for the screenshot (when the file still exists on disk — see retention
+    policy in `price_checker._prune_old_screenshots`).
+    """
+    last_checked_at: Optional[str] = None
+    last_amount: Optional[float] = None
+    last_currency: Optional[str] = None
+    last_screenshot_url: Optional[str] = None
+
+    if latest is not None:
+        last_checked_at = latest.checked_at.isoformat()
+        last_amount = float(latest.amount) if latest.amount is not None else None
+        last_currency = latest.currency
+        if latest.screenshot_path:
+            screenshot_name = Path(latest.screenshot_path).name
+            if (SCREENSHOTS_DIR / screenshot_name).exists():
+                last_screenshot_url = f"/screenshots/{screenshot_name}"
+
     return {
-        "id":               sub.id,
-        "user_id":          sub.user_id,
-        "origin_iata":      sub.departure_airport,
-        "destination_iata": sub.arrival_airport,
-        "airline":          sub.airline,
-        "departure_date":   sub.departure_date,
-        "departure_time":   sub.departure_time,
-        "flight_number":    sub.flight_number,
-        "airline_iata":     sub.airline_iata,
-        "need_baggage":     sub.need_baggage,
-        "baggage_info":     "with_baggage" if sub.need_baggage else "no_baggage",
-        "source_url":       sub.source_url,
-        "is_active":        sub.is_active,
-        "created_at":       sub.created_at.isoformat(),
-        "last_checked_at":  None,
+        "id":                  sub.id,
+        "user_id":             sub.user_id,
+        "origin_iata":         sub.departure_airport,
+        "destination_iata":    sub.arrival_airport,
+        "airline":             sub.airline,
+        "departure_date":      sub.departure_date,
+        "departure_time":      sub.departure_time,
+        "flight_number":       sub.flight_number,
+        "airline_iata":        sub.airline_iata,
+        "need_baggage":        sub.need_baggage,
+        "baggage_info":        "with_baggage" if sub.need_baggage else "no_baggage",
+        "source_url":          sub.source_url,
+        "is_active":           sub.is_active,
+        "created_at":          sub.created_at.isoformat(),
+        "last_checked_at":     last_checked_at,
+        "last_amount":         last_amount,
+        "last_currency":       last_currency,
+        "last_screenshot_url": last_screenshot_url,
     }
 
 
@@ -143,7 +180,9 @@ def create_subscription(
 def list_subscriptions(db: Session = Depends(get_db)) -> list[dict]:
     subs = db.query(Subscription).filter(Subscription.user_id == "default").all()
     logger.info(f"[subscriptions] list | count={len(subs)}")
-    return [_sub_to_dict(s) for s in subs]
+    # N+1 by design — typical user has <20 subs, the readability win
+    # (no manual GROUP-BY-on-max-checked_at) is worth the extra queries.
+    return [_sub_to_dict(s, get_latest_price_check(db, s.id)) for s in subs]
 
 
 @app.delete("/subscriptions/{sub_id}")

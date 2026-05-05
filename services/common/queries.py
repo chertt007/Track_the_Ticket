@@ -83,6 +83,19 @@ def delete_strategy(db: Session, subscription_id: int) -> None:
         logger.info(f"[queries] deleted strategy sub={subscription_id}")
 
 
+def get_latest_price_check(db: Session, subscription_id: int) -> Optional[PriceCheck]:
+    """
+    Return the most recent price-check row for this subscription, or None.
+    Used by the API to populate "last checked" info on subscription cards.
+    """
+    return (
+        db.query(PriceCheck)
+        .filter(PriceCheck.subscription_id == subscription_id)
+        .order_by(PriceCheck.checked_at.desc())
+        .first()
+    )
+
+
 def save_price_check(
     db: Session,
     subscription_id: int,

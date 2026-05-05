@@ -18,26 +18,38 @@ interface SubscriptionApiResponse {
   baggage_info: string | null
   is_active: boolean
   last_checked_at: string | null
-  last_notified_at: string | null
+  last_amount: number | null
+  last_currency: string | null
+  last_screenshot_url: string | null
+}
+
+// Resolve a relative screenshot URL ("/screenshots/foo.jpg") against the API
+// base so the <img> tag can fetch it. Pass-through for null and absolute URLs.
+const API_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:8000') as string
+function resolveScreenshotUrl(path: string | null): string | null {
+  if (!path) return null
+  if (/^https?:\/\//i.test(path)) return path
+  return `${API_URL}${path}`
 }
 
 // ── Mapping: API snake_case → frontend camelCase ──────────────────────────────
 
 function mapSubscription(raw: SubscriptionApiResponse): Subscription {
   return {
-    id:              String(raw.id),
-    flightNumber:    raw.flight_number  ?? '—',
-    airline:         raw.airline        ?? '—',
-    originIata:      raw.origin_iata    ?? '???',
-    destinationIata: raw.destination_iata ?? '???',
-    departureDate:   raw.departure_date ?? '—',
-    departureTime:   raw.departure_time?.slice(0, 5) ?? '—', // "08:30:00" → "08:30"
-    baggageInfo:     raw.baggage_info   ?? '—',
-    sourceUrl:       raw.source_url,
-    isActive:        raw.is_active,
-    lastCheckedAt:   raw.last_checked_at,
-    lastPrice:       null, // fetched separately via GET /subscriptions/{id}/prices
-    currency:        'RUB',
+    id:                String(raw.id),
+    flightNumber:      raw.flight_number  ?? '—',
+    airline:           raw.airline        ?? '—',
+    originIata:        raw.origin_iata    ?? '???',
+    destinationIata:   raw.destination_iata ?? '???',
+    departureDate:     raw.departure_date ?? '—',
+    departureTime:     raw.departure_time?.slice(0, 5) ?? '—', // "08:30:00" → "08:30"
+    baggageInfo:       raw.baggage_info   ?? '—',
+    sourceUrl:         raw.source_url,
+    isActive:          raw.is_active,
+    lastCheckedAt:     raw.last_checked_at,
+    lastPrice:         raw.last_amount,
+    currency:          raw.last_currency,
+    lastScreenshotUrl: resolveScreenshotUrl(raw.last_screenshot_url),
   }
 }
 
@@ -59,9 +71,9 @@ export const createSubscriptionApi = createAsyncThunk<Subscription, CreateSubscr
   },
 )
 export interface CheckResult {
-  price: number
-  currency: string
-  flight_number: string
+  price: number | null
+  currency: string | null
+  flight_number: string | null
   checked_at: string
 }
 
@@ -70,8 +82,11 @@ export const checkSubscriptionApi = createAsyncThunk<
   string
 >(
   'subscriptions/checkApi',
-  async (id: string) => {
+  async (id: string, { dispatch }) => {
     const { data } = await apiClient.post<CheckResult>(`/subscriptions/${id}/check`)
+    // Refresh the list so card picks up the new screenshot URL + amount
+    // straight from the DB rather than the stub fields the /check endpoint returns.
+    dispatch(fetchSubscriptions())
     return { id, result: data }
   },
 )
@@ -111,19 +126,20 @@ const subscriptionsSlice = createSlice({
     // Optimistic add — real subscription comes back on next fetchSubscriptions
     addSubscription: (state, action: PayloadAction<{ url: string }>) => {
       const newSub: Subscription = {
-        id:              `pending-${Date.now()}`,
-        flightNumber:    '—',
-        airline:         '—',
-        originIata:      '???',
-        destinationIata: '???',
-        departureDate:   '—',
-        departureTime:   '—',
-        baggageInfo:     '—',
-        sourceUrl:       action.payload.url,
-        isActive:        true,
-        lastCheckedAt:   null,
-        lastPrice:       null,
-        currency:        'RUB',
+        id:                `pending-${Date.now()}`,
+        flightNumber:      '—',
+        airline:           '—',
+        originIata:        '???',
+        destinationIata:   '???',
+        departureDate:     '—',
+        departureTime:     '—',
+        baggageInfo:       '—',
+        sourceUrl:         action.payload.url,
+        isActive:          true,
+        lastCheckedAt:     null,
+        lastPrice:         null,
+        currency:          null,
+        lastScreenshotUrl: null,
       }
       state.items.unshift(newSub)
     },
