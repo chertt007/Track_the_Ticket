@@ -7,3 +7,4 @@ python-dotenv==1.2.1
 langfuse==4.3.1
 openinference-instrumentation-openai==0.1.44
 anthropic>=0.40.0
+firebase-admin>=6.0
