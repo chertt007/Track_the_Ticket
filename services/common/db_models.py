@@ -1,13 +1,28 @@
 from datetime import datetime
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, ForeignKey, Integer, Numeric, String, Text
 from .database import Base
+
+
+class User(Base):
+    """
+    Application user, keyed by Firebase Authentication UID. A row is
+    lazily created on the first authenticated request (see
+    `upsert_user` in queries.py). `telegram_chat_id` is set when the
+    user redeems a deep-link token via the Telegram bot.
+    """
+    __tablename__ = "users"
+
+    id               = Column(String, primary_key=True)                       # Firebase UID
+    email            = Column(String, nullable=True)
+    telegram_chat_id = Column(BigInteger, nullable=True, index=True)
+    created_at       = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
 class Subscription(Base):
     __tablename__ = "subscriptions"
 
     id                = Column(Integer, primary_key=True, index=True)
-    user_id           = Column(String, nullable=False, default="default", index=True)
+    user_id           = Column(String, ForeignKey("users.id"), nullable=False, index=True)
 
     # Required fields
     departure_airport = Column(String, nullable=False)
