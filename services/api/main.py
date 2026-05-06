@@ -25,8 +25,9 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from api.dependencies import current_user
 from common.database import engine, get_db
-from common.db_models import Base, PriceCheck, Subscription
+from common.db_models import Base, PriceCheck, Subscription, User
 from common.exceptions import SubscriptionNotFoundError
 from common.queries import get_latest_price_check
 from link_parser import fetch_parsed_ticket
@@ -152,12 +153,16 @@ async def parse(req: ParseRequest) -> dict:
 @app.post("/subscriptions", status_code=201)
 def create_subscription(
     payload: SubscriptionCreate,
+    user: User = Depends(current_user),
     db: Session = Depends(get_db),
 ) -> dict:
-    logger.info(f"[subscriptions] create | {payload.origin_iata}→{payload.destination_iata}")
+    logger.info(
+        f"[subscriptions] create | uid={user.id} | "
+        f"{payload.origin_iata}→{payload.destination_iata}"
+    )
 
     sub = Subscription(
-        user_id           = "default",
+        user_id           = user.id,
         departure_airport = payload.origin_iata,
         arrival_airport   = payload.destination_iata,
         airline           = payload.airline,
@@ -177,27 +182,42 @@ def create_subscription(
 
 
 @app.get("/subscriptions")
-def list_subscriptions(db: Session = Depends(get_db)) -> list[dict]:
-    subs = db.query(Subscription).filter(Subscription.user_id == "default").all()
-    logger.info(f"[subscriptions] list | count={len(subs)}")
+def list_subscriptions(
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    subs = db.query(Subscription).filter(Subscription.user_id == user.id).all()
+    logger.info(f"[subscriptions] list | uid={user.id} count={len(subs)}")
     # N+1 by design — typical user has <20 subs, the readability win
     # (no manual GROUP-BY-on-max-checked_at) is worth the extra queries.
     return [_sub_to_dict(s, get_latest_price_check(db, s.id)) for s in subs]
 
 
 @app.delete("/subscriptions/{sub_id}")
-def delete_subscription(sub_id: int, db: Session = Depends(get_db)) -> dict:
+def delete_subscription(
+    sub_id: int,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> dict:
     sub = db.get(Subscription, sub_id)
-    if sub is None:
+    # 404 (not 403) when sub belongs to another user — never reveal existence.
+    if sub is None or sub.user_id != user.id:
         raise HTTPException(status_code=404, detail=f"Subscription {sub_id} not found")
     db.delete(sub)
     db.commit()
-    logger.info(f"[subscriptions] deleted | id={sub_id}")
+    logger.info(f"[subscriptions] deleted | uid={user.id} id={sub_id}")
     return {"ok": True}
 
 
 @app.post("/subscriptions/{sub_id}/check")
-async def check_subscription(sub_id: int) -> dict:
+async def check_subscription(
+    sub_id: int,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    sub = db.get(Subscription, sub_id)
+    if sub is None or sub.user_id != user.id:
+        raise HTTPException(status_code=404, detail=f"Subscription {sub_id} not found")
     try:
         await check_price(sub_id)
     except SubscriptionNotFoundError as exc:
