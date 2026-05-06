@@ -6,9 +6,37 @@ from decimal import Decimal
 from typing import Optional
 from sqlalchemy.orm import Session
 
-from .db_models import Airline, PriceCheck, Strategy, Subscription
+from .db_models import Airline, PriceCheck, Strategy, Subscription, User
 
 logger = logging.getLogger(__name__)
+
+
+def get_user(db: Session, user_id: str) -> Optional[User]:
+    """Fetch a single user by Firebase UID. Returns None if not found."""
+    return db.get(User, user_id)
+
+
+def upsert_user(db: Session, user_id: str, email: Optional[str]) -> User:
+    """
+    Lazily create a `users` row on the user's first authenticated request,
+    or refresh the cached email if Firebase reports a new one. Returns the
+    persisted SQLAlchemy User.
+    """
+    user = db.get(User, user_id)
+    if user is None:
+        user = User(id=user_id, email=email)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        logger.info(f"[queries] created user uid={user_id} email={email}")
+        return user
+
+    if email and user.email != email:
+        user.email = email
+        db.commit()
+        db.refresh(user)
+        logger.info(f"[queries] updated user uid={user_id} email={email}")
+    return user
 
 
 def get_subscription(db: Session, subscription_id: int) -> Optional[Subscription]:
