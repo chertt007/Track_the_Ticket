@@ -12,6 +12,7 @@ import { useLocale } from '../hooks/useLocale'
 import { fetchSubscriptions } from '../store/slices/subscriptionsSlice'
 import SubscriptionCard from '../components/SubscriptionCard'
 import AddSubscriptionModal from '../components/AddSubscriptionModal'
+import TelegramConnectBanner from '../components/TelegramConnectBanner'
 import { dashboardStyles as s } from './DashboardPage.styles'
 
 /** Russian plural rules: 1 → one, 2-4 → few, 5+ → many */
@@ -48,6 +49,9 @@ export default function DashboardPage() {
 
   return (
     <Box className="page-enter">
+      {/* Telegram connect prompt — auto-hides once user linked */}
+      <TelegramConnectBanner />
+
       {/* Header */}
       <Box sx={s.headerRow}>
         <Box>

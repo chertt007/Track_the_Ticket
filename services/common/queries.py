@@ -1,13 +1,14 @@
 """Database query helpers — one place for all SELECT logic."""
 import json
 import logging
-from datetime import datetime
+import secrets
+from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Optional
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from .db_models import Airline, PriceCheck, Strategy, Subscription, User
+from .db_models import Airline, PriceCheck, Strategy, Subscription, TelegramLinkToken, User
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,73 @@ def upsert_user(db: Session, user_id: str, email: Optional[str]) -> User:
         db.refresh(user)
         logger.info(f"[queries] updated user uid={user_id} email={email}")
     return user
+
+
+# ── Telegram link tokens ──────────────────────────────────────────────────────
+
+LINK_TOKEN_TTL_MINUTES = 10
+
+
+def create_link_token(db: Session, user_id: str) -> TelegramLinkToken:
+    """
+    Issue a fresh deep-link token for this user and invalidate any previous
+    unused tokens (one active token per user at a time). Returns the row so
+    the caller can build the deep-link URL and report `expires_at`.
+    """
+    db.query(TelegramLinkToken).filter(
+        TelegramLinkToken.user_id == user_id,
+        TelegramLinkToken.used_at.is_(None),
+    ).delete()
+
+    row = TelegramLinkToken(
+        token=secrets.token_hex(16),  # 32-char hex, ~128 bits
+        user_id=user_id,
+        expires_at=datetime.utcnow() + timedelta(minutes=LINK_TOKEN_TTL_MINUTES),
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    logger.info(f"[queries] issued tg link token user={user_id}")
+    return row
+
+
+def claim_link_token(db: Session, token: str, chat_id: int) -> tuple[bool, str]:
+    """
+    Redeem a deep-link token: bind `chat_id` to the user and mark the token
+    used. Re-binding a different chat_id to a user is allowed and silently
+    overwrites — users may switch Telegram accounts/devices.
+
+    Returns (ok, reason) where reason is one of:
+      "ok", "not_found", "expired", "already_used".
+    """
+    row = db.get(TelegramLinkToken, token)
+    if row is None:
+        return False, "not_found"
+    if row.used_at is not None:
+        return False, "already_used"
+    if row.expires_at < datetime.utcnow():
+        return False, "expired"
+
+    user = db.get(User, row.user_id)
+    if user is None:
+        # Token references a user that no longer exists — treat as not_found.
+        return False, "not_found"
+
+    user.telegram_chat_id = chat_id
+    row.used_at = datetime.utcnow()
+    db.commit()
+    logger.info(f"[queries] tg link claimed user={user.id} chat_id={chat_id}")
+    return True, "ok"
+
+
+def unlink_telegram(db: Session, user_id: str) -> None:
+    """Drop the Telegram binding for a user. No-op if not linked."""
+    user = db.get(User, user_id)
+    if user is None or user.telegram_chat_id is None:
+        return
+    user.telegram_chat_id = None
+    db.commit()
+    logger.info(f"[queries] tg unlinked user={user_id}")
 
 
 def get_subscription(db: Session, subscription_id: int) -> Optional[Subscription]:

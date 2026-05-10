@@ -115,6 +115,26 @@ export const translations = {
 
     // Auth — shared
     backLink: 'Назад',
+
+    // Telegram
+    telegram: 'Telegram',
+    connectTelegram: 'Подключить Telegram',
+    telegramBannerTitle: 'Получай уведомления в Telegram',
+    telegramBannerSubtitle: 'Цена и скриншот после каждой проверки — прямо в чат с ботом',
+    telegramConnected: 'Telegram подключён',
+    telegramNotConnected: 'Telegram не подключён',
+    telegramUnlink: 'Отвязать',
+    telegramUnlinking: 'Отвязываем...',
+    telegramGetLink: 'Получить ссылку',
+    telegramOpenApp: 'Открыть в Telegram',
+    telegramOpenWeb: 'Не открылось? Открыть в браузере',
+    telegramOpenHint: 'Нажмите кнопку — откроется чат с ботом, нажмите Start',
+    telegramWaitingClaim: 'Ждём подтверждения от бота...',
+    telegramExpiresIn: 'Ссылка истекает через {n} сек',
+    telegramLinkExpired: 'Ссылка истекла, обнови',
+    telegramRefresh: 'Обновить ссылку',
+    telegramErrorLoad: 'Не удалось загрузить статус',
+    telegramErrorIssue: 'Не удалось получить ссылку',
   },
 
   en: {
@@ -233,6 +253,26 @@ export const translations = {
 
     // Auth — shared
     backLink: 'Back',
+
+    // Telegram
+    telegram: 'Telegram',
+    connectTelegram: 'Connect Telegram',
+    telegramBannerTitle: 'Get alerts in Telegram',
+    telegramBannerSubtitle: 'Price and screenshot after every check — straight into your bot chat',
+    telegramConnected: 'Telegram connected',
+    telegramNotConnected: 'Telegram not connected',
+    telegramUnlink: 'Unlink',
+    telegramUnlinking: 'Unlinking...',
+    telegramGetLink: 'Get link',
+    telegramOpenApp: 'Open in Telegram',
+    telegramOpenWeb: "Didn't open? Use the browser",
+    telegramOpenHint: 'Click the button — Telegram opens the bot chat, then press Start',
+    telegramWaitingClaim: 'Waiting for the bot to confirm...',
+    telegramExpiresIn: 'Link expires in {n} sec',
+    telegramLinkExpired: 'Link expired, refresh',
+    telegramRefresh: 'Refresh link',
+    telegramErrorLoad: 'Could not load status',
+    telegramErrorIssue: 'Could not get link',
   },
 }
 

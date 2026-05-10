@@ -18,6 +18,24 @@ class User(Base):
     created_at       = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
+class TelegramLinkToken(Base):
+    """
+    One-time deep-link token used to bind a Telegram chat to a `users` row.
+
+    Flow: web app calls POST /telegram/link-token → row inserted here. User
+    opens https://t.me/<bot>?start=<token>; bot forwards token to API which
+    validates expiry/single-use, sets `users.telegram_chat_id`, and stamps
+    `used_at`. Tokens are short-lived (10 min) and single-use.
+    """
+    __tablename__ = "telegram_link_tokens"
+
+    token      = Column(String, primary_key=True)                              # uuid4 hex
+    user_id    = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    expires_at = Column(DateTime, nullable=False)
+    used_at    = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
 class Subscription(Base):
     __tablename__ = "subscriptions"
 

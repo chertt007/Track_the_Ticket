@@ -47,4 +47,22 @@ export const settingsStyles = {
     fontWeight: 600,
     fontSize: '0.8rem',
   } as SxProps<Theme>,
+
+  telegramRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1,
+    mb: 1.25,
+  } as SxProps<Theme>,
+
+  telegramIcon: {
+    fontSize: 18,
+    color: '#229ED9',
+  } as SxProps<Theme>,
+
+  telegramButton: {
+    fontWeight: 600,
+    fontSize: '0.8rem',
+    textTransform: 'none',
+  } as SxProps<Theme>,
 }

@@ -35,6 +35,12 @@ $api = Start-Process -FilePath $venvPython `
     -WorkingDirectory "$root\services" `
     -PassThru -NoNewWindow
 
+Write-Host "Starting Telegram bot (long-polling)..." -ForegroundColor Green
+$bot = Start-Process -FilePath $venvPython `
+    -ArgumentList "-m", "bot" `
+    -WorkingDirectory "$root\services" `
+    -PassThru -NoNewWindow
+
 Write-Host "Starting Frontend (port 5173)..." -ForegroundColor Green
 $fe = Start-Process -FilePath "cmd" `
     -ArgumentList "/C npm run dev" `
@@ -45,6 +51,7 @@ Write-Host ""
 Write-Host "Running. Press Ctrl+C to stop all." -ForegroundColor Yellow
 Write-Host "  Frontend: http://localhost:5173" -ForegroundColor White
 Write-Host "  API:      http://localhost:8000" -ForegroundColor White
+Write-Host "  Bot:      Telegram long-polling" -ForegroundColor White
 Write-Host ""
 
 try {
@@ -53,6 +60,9 @@ try {
     Write-Host "`nStopping..." -ForegroundColor Cyan
     if ($api -and !$api.HasExited) {
         taskkill /F /T /PID $api.Id 2>$null
+    }
+    if ($bot -and !$bot.HasExited) {
+        taskkill /F /T /PID $bot.Id 2>$null
     }
     if ($fe -and !$fe.HasExited) {
         taskkill /F /T /PID $fe.Id 2>$null

@@ -2,15 +2,20 @@
 TrackTheTicket HTTP API.
 
 Endpoints:
-  GET  /health               — liveness check
-  POST /parse                — parse an Aviasales URL, return flight details
-  POST /subscriptions        — save a subscription to the DB
-  GET  /subscriptions        — list subscriptions for a user
-  DELETE /subscriptions/{id} — delete a subscription
+  GET  /health                 — liveness check
+  POST /parse                  — parse an Aviasales URL, return flight details
+  POST /subscriptions          — save a subscription to the DB
+  GET  /subscriptions          — list subscriptions for a user
+  DELETE /subscriptions/{id}   — delete a subscription
+  POST /telegram/link-token    — issue a deep-link token (auth)
+  GET  /telegram/status        — return Telegram link status (auth)
+  DELETE /telegram/unlink      — drop the Telegram binding (auth)
+  POST /telegram/claim         — internal: bot redeems a token (shared secret)
 """
 from __future__ import annotations
 
 import logging
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -19,7 +24,7 @@ from common.logging_config import setup_logging
 setup_logging()
 logger = logging.getLogger(__name__)
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, Header, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -29,7 +34,12 @@ from api.dependencies import current_user
 from common.database import engine, get_db
 from common.db_models import Base, PriceCheck, Subscription, User
 from common.exceptions import SubscriptionNotFoundError
-from common.queries import get_latest_price_check
+from common.queries import (
+    claim_link_token,
+    create_link_token,
+    get_latest_price_check,
+    unlink_telegram,
+)
 from link_parser import fetch_parsed_ticket
 from price_checker import check_price
 from price_checker.price_checker import SCREENSHOTS_DIR
@@ -207,6 +217,79 @@ def delete_subscription(
     db.commit()
     logger.info(f"[subscriptions] deleted | uid={user.id} id={sub_id}")
     return {"ok": True}
+
+
+# ── Telegram link routes ──────────────────────────────────────────────────────
+
+
+def _mask_chat_id(chat_id: Optional[int]) -> Optional[str]:
+    """Show only last 4 digits — UI cosmetic, no real secrecy."""
+    if chat_id is None:
+        return None
+    s = str(chat_id)
+    return f"***{s[-4:]}" if len(s) > 4 else s
+
+
+def _bot_username() -> str:
+    # Strip a leading "@" defensively — t.me/<name> must NOT include it.
+    name = (os.environ.get("TELEGRAM_BOT_USERNAME") or "").lstrip("@").strip()
+    if not name:
+        raise HTTPException(status_code=500, detail="TELEGRAM_BOT_USERNAME not configured")
+    return name
+
+
+@app.post("/telegram/link-token")
+def issue_telegram_link_token(
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    bot = _bot_username()
+    row = create_link_token(db, user.id)
+    return {
+        "token":        row.token,
+        "expires_at":   row.expires_at.isoformat(),
+        "bot_username": bot,
+        "deep_link":    f"https://t.me/{bot}?start={row.token}",
+    }
+
+
+@app.get("/telegram/status")
+def telegram_status(user: User = Depends(current_user)) -> dict:
+    return {
+        "linked":         user.telegram_chat_id is not None,
+        "chat_id_masked": _mask_chat_id(user.telegram_chat_id),
+    }
+
+
+@app.delete("/telegram/unlink")
+def telegram_unlink(
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    unlink_telegram(db, user.id)
+    return {"ok": True}
+
+
+class TelegramClaimRequest(BaseModel):
+    token: str
+    chat_id: int
+
+
+@app.post("/telegram/claim")
+def telegram_claim(
+    payload: TelegramClaimRequest,
+    x_internal_secret: Optional[str] = Header(default=None, alias="X-Internal-Secret"),
+    db: Session = Depends(get_db),
+) -> dict:
+    expected = os.environ.get("TELEGRAM_INTERNAL_SECRET")
+    if not expected:
+        raise HTTPException(status_code=500, detail="TELEGRAM_INTERNAL_SECRET not configured")
+    if x_internal_secret != expected:
+        # Generic 401 — never leak which header / why it failed.
+        raise HTTPException(status_code=401, detail="unauthorized")
+
+    ok, reason = claim_link_token(db, payload.token, payload.chat_id)
+    return {"ok": ok, "message": reason}
 
 
 @app.post("/subscriptions/{sub_id}/check")

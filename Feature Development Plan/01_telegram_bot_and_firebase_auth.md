@@ -55,8 +55,11 @@
 | Bot транспорт | Long-polling, отдельный процесс |
 | Bot библиотека | `python-telegram-bot` |
 | Связь чат↔юзер | 1:1, колонка `users.telegram_chat_id` |
-| Когда уведомлять | После **каждой** успешной проверки |
+| Когда уведомлять | После **каждой** успешной проверки (1 проверка = 1 сообщение, без батчинга/тредхолдов) |
 | Канал связки | Deep-link с одноразовым токеном (UUID, TTL 10 мин), кнопка + QR на одном URL |
+| UI размещение | Dashboard-баннер пока `linked === false` + пункт в SettingsMenu всегда |
+| Re-link на новом устройстве | Overwrite `users.telegram_chat_id` без 409 |
+| Если бот заблокирован (sendPhoto 403) | Только лог, БД не трогаем (юзер сам разблокирует или переподключит) |
 | Хостинг фронта | Firebase Hosting |
 | Содержимое TG-сообщения | `sendPhoto` JPEG + caption (маршрут, дата, цена, время проверки) |
 
@@ -229,6 +232,14 @@ loginError:        "Ошибка входа. Попробуйте ещё раз.
 
 ### Этап 3 — Backend для Telegram-связки
 
+**Prerequisite (один раз перед стартом этапа):** создать бота через `@BotFather` в Telegram:
+1. `/newbot` → ввести display name → получить **bot username** (например `TrackTheTicketBot`) и **bot token**.
+2. (Опционально) `/setcommands` → загрузить список команд: `start - Connect account`, `status - Show link status`, `unlink - Disconnect account`. Нужно чтобы юзер видел команды в меню `/`.
+3. Положить в корневой `.env`:
+   - `TELEGRAM_BOT_TOKEN=<token from BotFather>`
+   - `TELEGRAM_BOT_USERNAME=<bot_username без @>`
+   - `TELEGRAM_INTERNAL_SECRET=<openssl rand -hex 32>` — общий секрет для `/telegram/claim`.
+
 **Цель:** API умеет генерить link-token, бот может его «погасить», фронт может узнать статус.
 
 #### 3.1. Модель `TelegramLinkToken`
@@ -248,7 +259,7 @@ TTL: 10 минут (константа `LINK_TOKEN_TTL_MINUTES = 10`).
 #### 3.2. Queries
 В `services/common/queries.py`:
 - `create_link_token(db, user_id) -> str` — генерит uuid4 hex, удаляет предыдущие неиспользованные токены этого юзера (один активный за раз), вставляет новый, возвращает токен-строку.
-- `claim_link_token(db, token, chat_id) -> bool` — проверяет: токен есть, `used_at IS NULL`, `expires_at > now`. Если ОК → `users.telegram_chat_id = chat_id`, `token.used_at = now()`, возвращает `True`. Иначе `False`.
+- `claim_link_token(db, token, chat_id) -> bool` — проверяет: токен есть, `used_at IS NULL`, `expires_at > now`. Если ОК → `users.telegram_chat_id = chat_id` (**overwrite без проверки** — re-link на новом устройстве это норма), `token.used_at = now()`, возвращает `True`. Иначе `False`.
 - `unlink_telegram(db, user_id) -> None` — обнуляет `telegram_chat_id`.
 
 #### 3.3. Endpoints
@@ -339,8 +350,8 @@ def run() -> None:
 `__main__.py` просто вызывает `run()`.
 
 #### 4.6. Запуск
-- Локально: два процесса параллельно — `uvicorn api.main:app --reload` и `python -m bot`.
-- Обновить `dev.ps1` чтобы стартовал оба (через `Start-Job` или просто два терминала).
+- Локально: три процесса параллельно — `uvicorn api.main:app`, `npm run dev`, `python -m bot`.
+- Обновить `dev.ps1`: добавить запуск бота тем же паттерном что API (`Start-Process -FilePath $venvPython -ArgumentList "-m", "bot" -WorkingDirectory "$root\services"`). Все три процесса в одной команде, общий Ctrl+C на остановку.
 - В проде: systemd-сервис / docker-compose service для бота.
 
 #### 4.7. Тест этапа
@@ -370,8 +381,20 @@ def run() -> None:
 - `linked` — «✅ Подключено: ***2345», кнопка «Отвязать».
 
 #### 5.2. Интеграция в UI
-- В `SettingsMenu.tsx` (шестерёнка в шапке) добавить пункт «Telegram» → открывает `TelegramConnectModal`.
+
+**A. Dashboard-баннер (новый компонент):**
+Новый файл: **`frontend/src/components/TelegramConnectBanner.tsx`** + **`TelegramConnectBanner.styles.ts`**.
+- Виден на `DashboardPage` сверху (над списком подписок) **только когда** `telegramStatus.linked === false`.
+- Контент: иконка TG + текст «Get instant alerts in Telegram» + кнопка «Connect» → открывает общий `TelegramConnectModal`.
+- После успешного подключения автоматически исчезает (поллинг статуса завершается, redux обновляется).
+- Запрос статуса: один `GET /telegram/status` при заходе на Dashboard, кешировать в Redux slice `telegramSlice`.
+
+**B. SettingsMenu (всегда доступен):**
+- В `SettingsMenu.tsx` (шестерёнка в шапке) добавить пункт «Telegram» → открывает тот же `TelegramConnectModal`.
 - Иконка пункта — `TelegramIcon` из `@mui/icons-material` если есть, иначе `ChatIcon`.
+- Здесь модалка открывается всегда (и для подключения, и для отвязки/проверки статуса).
+
+**Общая логика модалки:** одинаковый компонент `TelegramConnectModal` обслуживает оба входа. На входе сам делает `GET /telegram/status` и решает: показать `idle` (получить ссылку) или `linked` (отвязать).
 
 #### 5.3. API-методы
 В `frontend/src/api/index.ts`:
@@ -447,7 +470,8 @@ async def send_check_result(
 2. Сформировать caption (см. шаблон ниже).
 3. `httpx.AsyncClient.post(f"https://api.telegram.org/bot{TOKEN}/sendPhoto", files={"photo": open(path, "rb")}, data={"chat_id": chat_id, "caption": ..., "parse_mode": "HTML"})`.
 4. Любые ошибки HTTP / сети — логировать, но **не пробрасывать**: проверка цены уже сохранена в БД, недоставленное уведомление не должно валить pipeline.
-5. Telegram API rate-limit (30 msg/sec на бота, 1 msg/sec на чат) — на нашем масштабе (десятки юзеров × 2-3 проверки в день) не упрёмся. Если упрёмся — экспоненциальный бэкофф на 429.
+5. **Особый случай 403 Forbidden** (юзер заблокировал бота / удалил чат): только `logger.warning(...)` с user_id и chat_id. **Не обнуляем `telegram_chat_id` в БД** — юзер может разблокировать бота и связь продолжит работать. Если хочет полностью отключиться — сделает это через UI «Отвязать».
+6. Telegram API rate-limit (30 msg/sec на бота, 1 msg/sec на чат) — на нашем масштабе (десятки юзеров × 2-3 проверки в день) не упрёмся. Если упрёмся — экспоненциальный бэкофф на 429.
 
 #### 6.3. Шаблон caption
 ```
@@ -499,7 +523,7 @@ async def _save_check_result(page, job, via, price):
 
 ## 4. Env vars (полный список)
 
-### Backend (`services/.env` или системные)
+### Backend (корневой `.env` или системные)
 ```
 ANTHROPIC_API_KEY=sk-ant-...                 # уже есть
 DATABASE_PATH=...                             # опционально
@@ -538,12 +562,12 @@ VITE_TELEGRAM_BOT_USERNAME=TrackTheTicketBot
 
 ## 6. Чеклист готовности фичи
 
-- [ ] Этап 1: Backend Firebase Auth, таблица `users`, защищённые endpoints.
-- [ ] Этап 2: Frontend на Firebase, login через Google/Apple/Facebook работает.
+- [x] Этап 1: Backend Firebase Auth, таблица `users`, защищённые endpoints.
+- [x] Этап 2: Frontend на Firebase, login через Google работает (Apple/Facebook отложены до настройки в их консолях).
 - [ ] Этап 3: Endpoints `/telegram/link-token`, `/telegram/status`, `/telegram/claim`, `/telegram/unlink`.
 - [ ] Этап 4: Бот стартует, ловит `/start <token>`, привязывает чат.
-- [ ] Этап 5: Модалка на сайте с QR + кнопкой + статусом.
-- [ ] Этап 6: После каждой успешной проверки приходит сообщение в Telegram.
+- [ ] Этап 5: Dashboard-баннер + модалка в Settings с QR + кнопкой + статусом.
+- [ ] Этап 6: После каждой успешной проверки приходит сообщение в Telegram (на 403 — только лог).
 - [ ] End-to-end: новый юзер регистрируется → создаёт подписку → подключает TG → проверяет цену → получает уведомление.
 - [ ] Все строки в `translations.ts` (ru + en).
 - [ ] Все sx-стили в `.styles.ts`.

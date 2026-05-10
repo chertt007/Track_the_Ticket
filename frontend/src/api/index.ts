@@ -64,3 +64,31 @@ export const createSubscription = async (payload: CreateSubscriptionPayload) => 
   const { data } = await apiClient.post('/subscriptions', payload)
   return data
 }
+
+// ── Telegram ──────────────────────────────────────────────────────────────────
+
+export interface TelegramLinkToken {
+  token: string
+  expires_at: string         // ISO
+  bot_username: string
+  deep_link: string          // https://t.me/<bot>?start=<token>
+}
+
+export interface TelegramStatus {
+  linked: boolean
+  chat_id_masked: string | null
+}
+
+export const requestTelegramLinkToken = async (): Promise<TelegramLinkToken> => {
+  const { data } = await apiClient.post<TelegramLinkToken>('/telegram/link-token')
+  return data
+}
+
+export const getTelegramStatus = async (): Promise<TelegramStatus> => {
+  const { data } = await apiClient.get<TelegramStatus>('/telegram/status')
+  return data
+}
+
+export const unlinkTelegram = async (): Promise<void> => {
+  await apiClient.delete('/telegram/unlink')
+}
