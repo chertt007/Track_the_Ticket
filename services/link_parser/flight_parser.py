@@ -34,6 +34,8 @@ from urllib.parse import urlparse, parse_qs
 
 from playwright.async_api import async_playwright
 
+from common.airline_lookup import get_airline_name
+
 from .models import BaggageInfo, FlightLeg, ParsedTicket, TravelSegment
 from .url_decoder import decode_url
 
@@ -63,41 +65,6 @@ _T_PARAM_RE = re.compile(
 
 # static_fare_key baggage: L0 = no bags, L1 = 1 bag, etc.
 _FARE_LUGGAGE_RE = re.compile(r'L(\d+)')
-
-AIRLINE_NAMES: dict[str, str] = {
-    "SU": "Aeroflot",
-    "S7": "S7 Airlines",
-    "DP": "Pobeda",
-    "U6": "Ural Airlines",
-    "N4": "Nordwind Airlines",
-    "5N": "SmartAvia",
-    "A9": "Azimuth",
-    "UT": "UTair",
-    "IO": "IrAero",
-    "7R": "RusLine",
-    "Y7": "NordStar",
-    "WZ": "Red Wings",
-    "HZ": "Aurora",
-    "YC": "Yamal Airlines",
-    "R3": "Yakutia Airlines",
-    "KP": "Pegas Fly",
-    "TK": "Turkish Airlines",
-    "LY": "El Al",
-    "IZ": "Arkia",
-    "FZ": "flydubai",
-    "EK": "Emirates",
-    "QR": "Qatar Airways",
-    "EY": "Etihad Airways",
-    "LH": "Lufthansa",
-    "AF": "Air France",
-    "KL": "KLM",
-    "BA": "British Airways",
-    "FR": "Ryanair",
-    "W6": "Wizz Air",
-    "U2": "easyJet",
-    "SQ": "Singapore Airlines",
-}
-
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -178,7 +145,12 @@ def _parse_from_url_params(url: str) -> Optional[ParsedTicket]:
         duration_minutes=dur_min,
     )
 
-    airline_name = AIRLINE_NAMES.get(carrier, carrier)
+    airline_name = get_airline_name(carrier)
+    if airline_name is None:
+        # Unknown IATA — fall back to the code itself so downstream code keeps
+        # working, but log it so we can extend the OpenFlights overrides later.
+        logger.warning(f"[url_parse] no airline name for IATA '{carrier}'")
+        airline_name = carrier
 
     logger.info(
         f"[url_parse] {origin_iata}→{dest_iata} | {dep_date_str} {dep_time} "
