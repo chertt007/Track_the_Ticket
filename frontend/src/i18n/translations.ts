@@ -80,7 +80,6 @@ export const translations = {
     signingIn: 'Входим...',
     signOut: 'Выйти',
     authSubtitle: 'Автоматический мониторинг цен на авиабилеты',
-    devBypass: 'Продолжить без авторизации (dev)',
     authError: 'Ошибка авторизации. Попробуйте ещё раз.',
 
     // Auth — email/password form
@@ -94,32 +93,25 @@ export const translations = {
     emailRequired: 'Введите email',
     passwordRequired: 'Введите пароль',
     passwordMismatch: 'Пароли не совпадают',
-    codeRequired: 'Введите код',
 
     // Auth — sign up
     signUpTitle: 'Регистрация',
     registerButton: 'Создать аккаунт',
     alreadyHaveAccountLink: 'Уже есть аккаунт? Войти',
 
-    // Auth — confirm email
-    confirmSignUpTitle: 'Подтвердите email',
-    confirmSignUpHint: 'Код отправлен на',
-    codeLabel: 'Код из письма',
-    confirmEmailButton: 'Подтвердить',
-    resendCodeLink: 'Отправить повторно',
-    codeSentAgain: 'Код отправлен повторно.',
-    confirmSuccessSignIn: 'Email подтверждён. Войдите.',
-
-    // Auth — forgot password
+    // Auth — forgot password (Firebase sends an email with a reset link)
     forgotPasswordTitle: 'Восстановление пароля',
-    forgotPasswordHint: 'Введите email — отправим код для сброса пароля.',
-    sendCodeButton: 'Отправить код',
+    forgotPasswordHintFirebase: 'Введите email — отправим ссылку для сброса пароля.',
+    sendResetLinkButton: 'Отправить ссылку',
+    passwordResetEmailSent: 'Письмо отправлено. Проверьте почту.',
 
-    // Auth — new password
-    newPasswordTitle: 'Новый пароль',
-    newPasswordLabel: 'Новый пароль',
-    savePasswordButton: 'Сохранить',
-    passwordResetDone: 'Пароль изменён. Войдите с новым паролем.',
+    // Auth — Firebase error mapping
+    errInvalidEmail: 'Некорректный email.',
+    errWrongCredentials: 'Неверный email или пароль.',
+    errEmailInUse: 'Этот email уже используется.',
+    errWeakPassword: 'Пароль слишком короткий (минимум 6 символов).',
+    errPopupClosed: 'Окно входа было закрыто.',
+    errNetwork: 'Проблема с сетью. Проверьте соединение.',
 
     // Auth — shared
     backLink: 'Назад',
@@ -206,7 +198,6 @@ export const translations = {
     signingIn: 'Signing in...',
     signOut: 'Sign out',
     authSubtitle: 'Automatic flight price monitoring',
-    devBypass: 'Continue without auth (dev)',
     authError: 'Authentication error. Please try again.',
 
     // Auth — email/password form
@@ -220,32 +211,25 @@ export const translations = {
     emailRequired: 'Please enter your email',
     passwordRequired: 'Please enter your password',
     passwordMismatch: 'Passwords do not match',
-    codeRequired: 'Please enter the code',
 
     // Auth — sign up
     signUpTitle: 'Create account',
     registerButton: 'Create account',
     alreadyHaveAccountLink: 'Already have an account? Sign in',
 
-    // Auth — confirm email
-    confirmSignUpTitle: 'Confirm your email',
-    confirmSignUpHint: 'Code sent to',
-    codeLabel: 'Verification code',
-    confirmEmailButton: 'Confirm',
-    resendCodeLink: 'Resend code',
-    codeSentAgain: 'Code resent.',
-    confirmSuccessSignIn: 'Email confirmed. Please sign in.',
-
-    // Auth — forgot password
+    // Auth — forgot password (Firebase sends an email with a reset link)
     forgotPasswordTitle: 'Reset password',
-    forgotPasswordHint: 'Enter your email and we\'ll send a reset code.',
-    sendCodeButton: 'Send code',
+    forgotPasswordHintFirebase: 'Enter your email and we\'ll send you a reset link.',
+    sendResetLinkButton: 'Send reset link',
+    passwordResetEmailSent: 'Email sent. Check your inbox.',
 
-    // Auth — new password
-    newPasswordTitle: 'New password',
-    newPasswordLabel: 'New password',
-    savePasswordButton: 'Save',
-    passwordResetDone: 'Password changed. Please sign in.',
+    // Auth — Firebase error mapping
+    errInvalidEmail: 'Invalid email address.',
+    errWrongCredentials: 'Wrong email or password.',
+    errEmailInUse: 'This email is already in use.',
+    errWeakPassword: 'Password is too short (minimum 6 characters).',
+    errPopupClosed: 'Sign-in window was closed.',
+    errNetwork: 'Network problem. Check your connection.',
 
     // Auth — shared
     backLink: 'Back',

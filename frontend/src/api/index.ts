@@ -1,5 +1,8 @@
 import axios from 'axios'
+import { signOut } from 'firebase/auth'
+import { auth } from '@/config/firebase'
 import { store } from '@/store'
+import { clearAuth } from '@/store/slices/authSlice'
 
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:8000',
@@ -8,9 +11,12 @@ export const apiClient = axios.create({
   },
 })
 
-apiClient.interceptors.request.use((config) => {
-  const token = store.getState().auth.token
-  if (token) {
+apiClient.interceptors.request.use(async (config) => {
+  // Firebase SDK caches and rotates tokens for us — getIdToken() is cheap
+  // when the token is fresh and refreshes it automatically when expired.
+  const user = auth.currentUser
+  if (user) {
+    const token = await user.getIdToken()
     config.headers.Authorization = `Bearer ${token}`
   }
   return config
@@ -18,9 +24,11 @@ apiClient.interceptors.request.use((config) => {
 
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response?.status === 401) {
-      store.dispatch({ type: 'auth/clearAuth' })
+      // Sign the user out so the AuthGuard sends them to /login.
+      await signOut(auth).catch(() => undefined)
+      store.dispatch(clearAuth())
     }
     return Promise.reject(error)
   }

@@ -4,6 +4,7 @@ import logging
 from datetime import datetime
 from decimal import Decimal
 from typing import Optional
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from .db_models import Airline, PriceCheck, Strategy, Subscription, User
@@ -26,7 +27,17 @@ def upsert_user(db: Session, user_id: str, email: Optional[str]) -> User:
     if user is None:
         user = User(id=user_id, email=email)
         db.add(user)
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError:
+            # Concurrent first-login: another request inserted the row between
+            # our SELECT and INSERT. Roll back and re-fetch — the row is now
+            # visible to this session.
+            db.rollback()
+            user = db.get(User, user_id)
+            if user is None:
+                raise
+            return user
         db.refresh(user)
         logger.info(f"[queries] created user uid={user_id} email={email}")
         return user

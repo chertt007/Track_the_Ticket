@@ -1,5 +1,6 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { signOut } from 'aws-amplify/auth'
+import { signOut } from 'firebase/auth'
+import { auth } from '../config/firebase'
 import AppBar from '@mui/material/AppBar'
 import Toolbar from '@mui/material/Toolbar'
 import Typography from '@mui/material/Typography'
@@ -32,17 +33,20 @@ export default function Layout() {
 
   const handleSignOut = async () => {
     try {
-      await signOut()
+      await signOut(auth)
     } catch {
-      // If Cognito sign-out fails (e.g. dev mode), clear Redux state manually
+      // Surface nothing — onAuthStateChanged still fires and clears state
     } finally {
       dispatch(clearAuth())
       navigate('/login')
     }
   }
 
-  // User avatar initials derived from email
-  const avatarLetter = user?.email?.[0]?.toUpperCase() ?? '?'
+  // Avatar initial from displayName, falling back to email, then '?'
+  const avatarLetter =
+    user?.displayName?.[0]?.toUpperCase() ??
+    user?.email?.[0]?.toUpperCase() ??
+    '?'
 
   return (
     <Box sx={s.root}>
@@ -71,9 +75,9 @@ export default function Layout() {
 
             {/* User avatar — shows Google profile photo when available */}
             {user && (
-              <Tooltip title={user.email}>
-                <Avatar src={user.picture} sx={s.avatar}>
-                  {!user.picture && avatarLetter}
+              <Tooltip title={user.email ?? ''}>
+                <Avatar src={user.photoURL ?? undefined} sx={s.avatar}>
+                  {!user.photoURL && avatarLetter}
                 </Avatar>
               </Tooltip>
             )}

@@ -3,8 +3,8 @@ import { Provider } from 'react-redux'
 import { ThemeProvider } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
 
-// Must be imported before any Amplify auth calls
-import './config/amplify'
+// Must be imported once before any auth calls — initializes Firebase app
+import './config/firebase'
 
 import { store } from './store'
 import AppRouter from './pages/AppRouter'
@@ -19,7 +19,7 @@ function App() {
         <CssBaseline />
         <GlobalStyles />
         <BrowserRouter>
-          {/* Resolves Amplify session and sets up Hub listener */}
+          {/* Mirrors Firebase auth state into Redux */}
           <AuthProvider>
             <AppRouter />
           </AuthProvider>

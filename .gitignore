@@ -49,3 +49,7 @@ yarn-error.log*
 screenshots/
 services/screenshots/
 
+# ── DB & backups ─────────────────────────────────────────────────────────────
+data/*.db
+data/*.db.backup*
+

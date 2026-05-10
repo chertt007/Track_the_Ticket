@@ -1,6 +1,31 @@
-// Auth is disabled for the local-only phase — no Cognito, no network calls.
-// When real auth is introduced (simple JWT against our own API), restore the
-// session-resolution logic here. The authSlice is kept intact for that future.
+import { useEffect } from 'react'
+import { onAuthStateChanged } from 'firebase/auth'
+import { auth } from '../config/firebase'
+import { useAppDispatch } from '.'
+import { clearAuth, setUser } from '../store/slices/authSlice'
+
+/**
+ * Subscribe to Firebase auth state changes and mirror them into Redux.
+ *
+ * Mounted exactly once at the app root (via AuthProvider). On startup it
+ * fires with the persisted user (or null), so Redux's `loading` flag
+ * flips to `false` as soon as Firebase resolves the session.
+ */
 export function useAuth() {
-  // intentionally a no-op
+  const dispatch = useAppDispatch()
+
+  useEffect(() => {
+    return onAuthStateChanged(auth, (user) => {
+      if (user) {
+        dispatch(setUser({
+          uid:         user.uid,
+          email:       user.email,
+          displayName: user.displayName,
+          photoURL:    user.photoURL,
+        }))
+      } else {
+        dispatch(clearAuth())
+      }
+    })
+  }, [dispatch])
 }
