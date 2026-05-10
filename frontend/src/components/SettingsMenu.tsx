@@ -13,7 +13,10 @@ import LanguageIcon from '@mui/icons-material/Language'
 import TelegramIcon from '@mui/icons-material/Telegram'
 import { useT } from '../hooks/useT'
 import { useAppDispatch, useAppSelector } from '../hooks'
-import { useTelegramConnect } from '../hooks/useTelegramConnect'
+import {
+  isLinkExpired,
+  useTelegramConnect,
+} from '../hooks/useTelegramConnect'
 import { setLanguage, type Language } from '../store/slices/settingsSlice'
 import TelegramConnectModal from './TelegramConnectModal'
 import { settingsStyles as s } from './SettingsMenu.styles'
@@ -23,16 +26,23 @@ export default function SettingsMenu() {
   const dispatch = useAppDispatch()
   const language = useAppSelector(st => st.settings.language)
   const linked = useAppSelector(st => st.telegram.linked)
-  const { connect, issuing } = useTelegramConnect()
+  const pendingLink = useAppSelector(st => st.telegram.pendingLink)
+  const { launchNow, connectFallback, issuing } = useTelegramConnect()
   const [anchor, setAnchor] = useState<null | HTMLElement>(null)
   const [tgOpen, setTgOpen] = useState(false)
 
-  // Not linked → one-click connect (open Telegram + modal with countdown).
-  // Linked   → just open the modal so the user can see status / unlink.
-  const handleTelegramClick = async () => {
+  // Linked    → just open the modal (status / unlink).
+  // Not linked → fire tg:// synchronously if a fresh token is ready,
+  //              otherwise fall back to the async issue+launch path.
+  const handleTelegramClick = () => {
     setAnchor(null)
     setTgOpen(true)
-    if (!linked) await connect()
+    if (linked) return
+    if (pendingLink && !isLinkExpired(pendingLink)) {
+      launchNow(pendingLink)
+    } else {
+      void connectFallback()
+    }
   }
 
   return (

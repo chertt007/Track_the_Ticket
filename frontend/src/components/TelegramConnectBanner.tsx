@@ -6,7 +6,10 @@ import CircularProgress from '@mui/material/CircularProgress'
 import TelegramIcon from '@mui/icons-material/Telegram'
 import { useAppDispatch, useAppSelector } from '../hooks'
 import { useT } from '../hooks/useT'
-import { useTelegramConnect } from '../hooks/useTelegramConnect'
+import {
+  isLinkExpired,
+  useTelegramConnect,
+} from '../hooks/useTelegramConnect'
 import { fetchTelegramStatus } from '../store/slices/telegramSlice'
 import TelegramConnectModal from './TelegramConnectModal'
 import { telegramBannerStyles as s } from './TelegramConnectBanner.styles'
@@ -15,24 +18,37 @@ export default function TelegramConnectBanner() {
   const t = useT()
   const dispatch = useAppDispatch()
   const linked = useAppSelector(st => st.telegram.linked)
-  const { connect, issuing } = useTelegramConnect()
+  const pendingLink = useAppSelector(st => st.telegram.pendingLink)
+  const { prefetchToken, launchNow, connectFallback, issuing } = useTelegramConnect()
   const [modalOpen, setModalOpen] = useState(false)
 
-  // Resolve status once on mount. The modal also refreshes on its own open;
-  // the slice de-dupes via thunk semantics so the cost is negligible.
+  // Resolve status once on mount.
   useEffect(() => {
     if (linked === null) dispatch(fetchTelegramStatus())
   }, [linked, dispatch])
 
-  // Hide the banner while we don't yet know the status (avoids a flash) and
-  // once the user is linked.
+  // Pre-issue a token as soon as we know the user is not linked. This
+  // keeps the click handler synchronous so the `tg://` launch retains
+  // user-activation context (Chromium drops it across `await` boundaries).
+  useEffect(() => {
+    if (linked === false && (pendingLink === null || isLinkExpired(pendingLink))) {
+      void prefetchToken()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linked, pendingLink])
+
+  // Hide while we don't know the status (avoids a flash) and once linked.
   if (linked === null || linked === true) return null
 
-  // One-click flow: open Telegram immediately AND surface the modal so the
-  // user sees "waiting for confirmation" + countdown.
-  const handleConnect = async () => {
+  const handleClick = () => {
     setModalOpen(true)
-    await connect()
+    if (pendingLink && !isLinkExpired(pendingLink)) {
+      // Fresh token — fire tg:// synchronously inside the click handler.
+      launchNow(pendingLink)
+    } else {
+      // No usable token (network slow, prefetch failed). Best-effort async.
+      void connectFallback()
+    }
   }
 
   return (
@@ -48,9 +64,9 @@ export default function TelegramConnectBanner() {
         <Button
           variant="contained"
           size="small"
-          disabled={issuing}
-          startIcon={issuing ? <CircularProgress size={14} color="inherit" /> : null}
-          onClick={handleConnect}
+          disabled={issuing && !pendingLink}
+          startIcon={issuing && !pendingLink ? <CircularProgress size={14} color="inherit" /> : null}
+          onClick={handleClick}
           sx={s.button}
         >
           {t('connectTelegram')}

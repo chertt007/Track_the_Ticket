@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { requestTelegramLinkToken, type TelegramLinkToken } from '../api'
-import { setPendingLink } from '../store/slices/telegramSlice'
+import { type TelegramLinkToken } from '../api'
+import { issueLinkToken } from '../store/slices/telegramSlice'
 import { useAppDispatch } from '.'
 
 /**
@@ -15,46 +15,79 @@ export function buildTgDeepLink(link: TelegramLinkToken): string {
 }
 
 /**
- * Fire the `tg://` URL via a hidden iframe. If Telegram Desktop is
- * installed and registered as the protocol handler, the OS launches it
- * silently — our page stays put, no blank tab, no t.me detour. If the
- * scheme is unhandled the iframe fails quietly; we offer a manual web
- * fallback button in the modal for that case.
+ * Trigger the `tg://` URL via a programmatic anchor click. This is more
+ * reliable than a hidden iframe for protocol-handler launches: browsers
+ * treat it as a regular link click, fully passing query parameters
+ * (domain, start) to the OS handler. Our page stays put — the browser
+ * defers to the OS for the unknown scheme. If no app is registered the
+ * click fails quietly; the modal shows a manual web fallback.
  */
 export function launchTelegramDesktop(tgUrl: string): void {
-  const iframe = document.createElement('iframe')
-  iframe.style.display = 'none'
-  iframe.src = tgUrl
-  document.body.appendChild(iframe)
-  window.setTimeout(() => iframe.remove(), 3000)
+  const a = document.createElement('a')
+  a.href = tgUrl
+  a.style.position = 'fixed'
+  a.style.left = '-9999px'
+  a.style.top = '-9999px'
+  document.body.appendChild(a)
+  a.click()
+  window.setTimeout(() => a.remove(), 500)
+}
+
+export function isLinkExpired(link: TelegramLinkToken | null): boolean {
+  if (!link) return true
+  return new Date(link.expires_at).getTime() <= Date.now()
 }
 
 /**
  * One-click connect flow used by the Dashboard banner and the Settings
- * menu item. Issues a deep-link token and immediately attempts to launch
- * Telegram Desktop. The modal that consumes `pendingLink` from Redux
- * shows the "waiting for confirmation" state and offers a web fallback.
+ * menu item.
+ *
+ * Browsers strip "transient user activation" once a click handler `await`s,
+ * which causes Chromium to silently drop subsequent `tg://` protocol
+ * launches. To keep the launch in-gesture, we pre-issue the token via
+ * `prefetchToken()` (called from a `useEffect`, no gesture needed) and
+ * then `launchNow()` synchronously inside the click handler — no `await`
+ * between the user click and the protocol fire.
+ *
+ * `connectFallback()` is the async path used when no fresh token is
+ * available; the launch is best-effort and the modal shows a manual
+ * "Open in Telegram" anchor button as a guaranteed fallback.
  */
 export function useTelegramConnect() {
   const dispatch = useAppDispatch()
   const [issuing, setIssuing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const connect = async (): Promise<boolean> => {
+  const prefetchToken = async (): Promise<void> => {
     setError(null)
     setIssuing(true)
     try {
-      const link = await requestTelegramLinkToken()
-      dispatch(setPendingLink(link))
-      launchTelegramDesktop(buildTgDeepLink(link))
-      return true
+      await dispatch(issueLinkToken()).unwrap()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'failed')
-      return false
     } finally {
       setIssuing(false)
     }
   }
 
-  return { connect, issuing, error }
+  const launchNow = (link: TelegramLinkToken): void => {
+    launchTelegramDesktop(buildTgDeepLink(link))
+  }
+
+  const connectFallback = async (): Promise<TelegramLinkToken | null> => {
+    setError(null)
+    setIssuing(true)
+    try {
+      const link = await dispatch(issueLinkToken()).unwrap()
+      launchTelegramDesktop(buildTgDeepLink(link))
+      return link
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'failed')
+      return null
+    } finally {
+      setIssuing(false)
+    }
+  }
+
+  return { prefetchToken, launchNow, connectFallback, issuing, error }
 }

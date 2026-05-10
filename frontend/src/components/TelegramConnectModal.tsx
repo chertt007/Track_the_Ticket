@@ -12,7 +12,7 @@ import { useAppDispatch, useAppSelector } from '../hooks'
 import { useT } from '../hooks/useT'
 import {
   buildTgDeepLink,
-  launchTelegramDesktop,
+  isLinkExpired,
   useTelegramConnect,
 } from '../hooks/useTelegramConnect'
 import {
@@ -34,7 +34,7 @@ export default function TelegramConnectModal({ open, onClose }: Props) {
   const chatIdMasked = useAppSelector(st => st.telegram.chatIdMasked)
   const pendingLink = useAppSelector(st => st.telegram.pendingLink)
   const initialLoading = useAppSelector(st => st.telegram.loading)
-  const { connect, issuing, error } = useTelegramConnect()
+  const { connectFallback, issuing, error } = useTelegramConnect()
 
   const [unlinking, setUnlinking] = useState(false)
   const [secondsLeft, setSecondsLeft] = useState(0)
@@ -90,13 +90,6 @@ export default function TelegramConnectModal({ open, onClose }: Props) {
     if (linked === true && pendingLink) dispatch(setPendingLink(null))
   }, [linked, pendingLink, dispatch])
 
-  // Re-fire the desktop protocol handler with the same token — useful when
-  // the first launch was dismissed or Telegram Desktop wasn't running yet.
-  const handleRetryDesktop = () => {
-    if (!pendingLink) return
-    launchTelegramDesktop(buildTgDeepLink(pendingLink))
-  }
-
   // Web fallback: open https://t.me/... in a new tab. Used when Telegram
   // Desktop is not installed or the protocol handler isn't registered.
   const handleOpenWeb = () => {
@@ -104,7 +97,9 @@ export default function TelegramConnectModal({ open, onClose }: Props) {
     window.open(pendingLink.deep_link, '_blank', 'noopener,noreferrer')
   }
 
-  const handleRefresh = () => { void connect() }
+  const handleRefresh = () => { void connectFallback() }
+
+  const tgUrl = pendingLink ? buildTgDeepLink(pendingLink) : ''
 
   const handleUnlink = async () => {
     setUnlinking(true)
@@ -115,7 +110,10 @@ export default function TelegramConnectModal({ open, onClose }: Props) {
     }
   }
 
-  const expired = pendingLink !== null && secondsLeft === 0
+  // Computed from the absolute expiry timestamp — `secondsLeft` cannot be
+  // used here because it starts at 0 before the countdown effect runs,
+  // which would cause a brief "expired" flash right after a fresh issue.
+  const expired = isLinkExpired(pendingLink)
 
   return (
     <Dialog open={open} onClose={onClose} PaperProps={{ sx: s.paper }}>
@@ -194,8 +192,9 @@ export default function TelegramConnectModal({ open, onClose }: Props) {
           <Button
             variant="contained"
             fullWidth
+            component="a"
+            href={tgUrl}
             startIcon={<OpenInNewIcon />}
-            onClick={handleRetryDesktop}
             sx={{ ...s.primaryButton, mt: 2 }}
           >
             {t('telegramOpenApp')}

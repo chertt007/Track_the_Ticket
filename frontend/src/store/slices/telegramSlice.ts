@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
 import {
   getTelegramStatus,
+  requestTelegramLinkToken,
   unlinkTelegram as apiUnlinkTelegram,
   type TelegramLinkToken,
 } from '../../api'
@@ -30,6 +31,11 @@ const initialState: TelegramState = {
 export const fetchTelegramStatus = createAsyncThunk(
   'telegram/fetchStatus',
   async () => getTelegramStatus(),
+)
+
+export const issueLinkToken = createAsyncThunk(
+  'telegram/issueLink',
+  async () => requestTelegramLinkToken(),
 )
 
 export const unlinkTelegramThunk = createAsyncThunk(
@@ -64,6 +70,9 @@ const telegramSlice = createSlice({
       .addCase(fetchTelegramStatus.rejected, (s, a) => {
         s.loading = false
         s.error = a.error.message ?? 'failed'
+      })
+      .addCase(issueLinkToken.fulfilled, (s, a) => {
+        s.pendingLink = a.payload
       })
       .addCase(unlinkTelegramThunk.fulfilled, (s, a) => {
         s.linked = a.payload.linked
