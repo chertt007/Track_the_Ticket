@@ -37,6 +37,22 @@ logger = logging.getLogger(__name__)
 
 # Visible browser while we're still iterating; flip to True once stable.
 HEADLESS = False
+
+# Chromium launch args that hide common automation fingerprints. Cloudflare
+# and similar protections silently drop connections from clients that expose
+# `navigator.webdriver = true` or carry the default `--enable-automation`
+# flag — `flyredwings.com` was a confirmed case. These args mask both.
+_STEALTH_LAUNCH_ARGS = [
+    "--disable-blink-features=AutomationControlled",
+    "--disable-features=AutomationControlled",
+]
+
+# Real Chrome UA on Windows. Playwright's default UA contains "HeadlessChrome"
+# even when launched headed, which is one of the easier signals to filter on.
+_REAL_CHROME_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+)
 # Anchor to services/screenshots/ regardless of cwd, override via env if needed.
 _DEFAULT_SCREENSHOTS_DIR = Path(__file__).resolve().parent.parent / "screenshots"
 SCREENSHOTS_DIR = Path(os.environ.get("SCREENSHOTS_DIR") or _DEFAULT_SCREENSHOTS_DIR)
@@ -128,7 +144,15 @@ async def _resolve_job(subscription_id: int) -> Optional[_Job]:
 async def _open_fresh_page(browser: Browser, url: str) -> tuple[BrowserContext, Page]:
     """Open a new incognito context at the airline URL. Caller closes the context."""
     context = await browser.new_context(
-        viewport={"width": VIEWPORT_WIDTH, "height": VIEWPORT_HEIGHT}
+        viewport={"width": VIEWPORT_WIDTH, "height": VIEWPORT_HEIGHT},
+        user_agent=_REAL_CHROME_UA,
+        locale="en-US",
+        timezone_id="Europe/Moscow",
+    )
+    # Strip the last automation-only signal that survives the launch-arg flags.
+    # Sites like flyredwings.com check this in JS before responding.
+    await context.add_init_script(
+        "Object.defineProperty(navigator, 'webdriver', { get: () => undefined })"
     )
     page = await context.new_page()
     await page.goto(url, wait_until="domcontentloaded")
@@ -399,7 +423,7 @@ async def check_price(subscription_id: int) -> None:
         logger.info(f"[price_checker] sub id={job.subscription_id} no saved strategy")
 
     async with async_playwright() as pw:
-        browser = await pw.chromium.launch(headless=HEADLESS)
+        browser = await pw.chromium.launch(headless=HEADLESS, args=_STEALTH_LAUNCH_ARGS)
         try:
             replayed = False
             if strategy is not None:

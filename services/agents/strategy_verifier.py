@@ -32,23 +32,36 @@ from agents.vision_common import (
 logger = logging.getLogger(__name__)
 
 
-VERIFY_PROMPT = """You are looking at a screenshot of an airline's website
-showing a list of flights.
+VERIFY_PROMPT = """You are looking at a screenshot of an airline's website at
+the end of a price-check flow. The screenshot is ONE of two possible pages.
+Decide which one it is, then extract the price.
 
-Two-step task:
+CASE A — FLIGHT LIST.
+  Multiple flights are shown side-by-side or stacked, each with its own
+  departure time, route and price.
+  → Find the row whose departure time equals {time}. Accept any format
+    that means the same hour and minute: "06:10", "6:10", "6:10 AM",
+    "06:10 AM", "06.10", etc.
+    The row must be an actual schedule entry — not a generic clock,
+    countdown, or unrelated number on the page.
+  → If found, read the price for THAT row. If it has multiple tariffs
+    (economy / standard / flex / etc.) inside the row, pick the cheapest.
+    Never pick the price of a different flight.
+  → If no row matches the time, reply NO.
 
-1) FIND the row in the flight list whose departure time equals {time}.
-   Accept any time format that means the same hour and minute, for example:
-   "06:10", "6:10", "6:10 AM", "06:10 AM".
-   The row must look like an actual flight schedule entry — not a generic
-   clock or unrelated number elsewhere on the page.
-   If the screenshot is dominated by a popup / modal / cookie banner that
-   hides flight content, treat as not found.
+CASE B — TARIFF / FARE SELECTION PAGE for a single already-chosen flight.
+  Recognisable by: a heading like "Выберите тариф", "Choose your fare",
+  "Select fare", "Select tariff" — and 2 to 4 cards in a row, each card
+  representing a fare class (Light / Standard / Maximum, Эконом / Бизнес,
+  Basic / Comfort, etc.) with its own price button.
+  No per-flight rows with departure times are visible on this page.
+  → Trust that the chosen flight IS the one at {time} (we already
+    navigated to its tariff page). Return the cheapest amount across
+    all the fare cards.
 
-2) If the row from step 1 exists, READ its price. If that specific row has
-   multiple fare tariffs (economy / standard / flex / etc.), pick the
-   cheapest one shown FOR THAT ROW — never the cheapest price on the page
-   if it belongs to a different flight.
+If the screenshot fits NEITHER case — for example a popup/modal/cookie
+banner dominates the view, the page is still loading, or it shows an
+error / empty results — reply NO.
 
 Reply with EXACTLY one line, in one of these formats:
   NO
@@ -56,10 +69,10 @@ Reply with EXACTLY one line, in one of these formats:
   YES NONE
 
 Examples of valid replies:
-  NO                  -- flight at {time} is not visible
-  YES 12850 RUB       -- flight visible, price for that row is 12850 RUB
-  YES 499.99 EUR      -- flight visible, decimal price
-  YES NONE            -- flight visible, but its price is hidden / loading
+  NO                  -- neither case applies
+  YES 12850 RUB       -- found flight or fare card, cheapest price
+  YES 499.99 EUR      -- decimal price
+  YES NONE            -- correct page but price is hidden / loading
 
 Rules for the amount:
   - Strip thousands separators and currency symbols.
