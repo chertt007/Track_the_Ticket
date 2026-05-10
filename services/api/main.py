@@ -245,9 +245,12 @@ def issue_telegram_link_token(
 ) -> dict:
     bot = _bot_username()
     row = create_link_token(db, user.id)
+    # Stored timestamps are naive UTC (datetime.utcnow). JS parses ISO strings
+    # without a timezone marker as *local* time, which would mis-interpret the
+    # expiry. Append "Z" so the frontend reads it as UTC unambiguously.
     return {
         "token":        row.token,
-        "expires_at":   row.expires_at.isoformat(),
+        "expires_at":   row.expires_at.isoformat() + "Z",
         "bot_username": bot,
         "deep_link":    f"https://t.me/{bot}?start={row.token}",
     }
