@@ -24,6 +24,8 @@ from common.logging_config import setup_logging
 setup_logging()
 logger = logging.getLogger(__name__)
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Header, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -43,14 +45,27 @@ from common.queries import (
 from link_parser import fetch_parsed_ticket
 from price_checker import check_price
 from price_checker.price_checker import SCREENSHOTS_DIR
+from scheduler.jobs import build_scheduler
 from schemas import SubscriptionCreate, SubscriptionOut  # noqa: F401
 
 # Create tables on startup if they don't exist yet
 Base.metadata.create_all(bind=engine)
 
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    """Start the price-check scheduler on app startup, shut it down on exit."""
+    scheduler = build_scheduler()
+    scheduler.start()
+    try:
+        yield
+    finally:
+        scheduler.shutdown(wait=False)
+
+
 # ── App ───────────────────────────────────────────────────────────────────────
 
-app = FastAPI(title="TrackTheTicket", version="1.0.0")
+app = FastAPI(title="TrackTheTicket", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

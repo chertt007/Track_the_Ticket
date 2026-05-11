@@ -50,6 +50,10 @@ screenshots/
 services/screenshots/
 
 # ── DB & backups ─────────────────────────────────────────────────────────────
-data/*.db
-data/*.db.backup*
+# All SQLite files live under data/. Anything matching *.db anywhere in the
+# repo is a dev artefact and must NOT be committed — there used to be a stray
+# tracked tracktheticket.db at the repo root that kept getting restored on
+# checkout; the broad pattern below guards against that recurring.
+*.db
+*.db.backup*
 
