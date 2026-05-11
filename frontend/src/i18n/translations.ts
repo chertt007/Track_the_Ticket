@@ -18,7 +18,6 @@ export const translations = {
     flight: 'Рейс',
     airline: 'Авиакомпания',
     departure: 'Вылет',
-    baggage: 'Багаж',
     active: 'Активна',
     inactive: 'Неактивна',
     lastChecked: 'Последняя проверка',
@@ -45,9 +44,6 @@ export const translations = {
     confirmTitle: 'Подтвердите рейс',
     confirmAirline: 'Авиакомпания',
     confirmPrice: 'Цена',
-    confirmBaggageQuestion: 'Нужен ли багаж?',
-    baggageYes: 'Да',
-    baggageNo: 'Нет',
     confirmButton: 'Подтвердить',
 
     // SubscriptionDetailPage
@@ -156,7 +152,6 @@ export const translations = {
     flight: 'Flight',
     airline: 'Airline',
     departure: 'Departure',
-    baggage: 'Baggage',
     active: 'Active',
     inactive: 'Inactive',
     lastChecked: 'Last checked',
@@ -183,9 +178,6 @@ export const translations = {
     confirmTitle: 'Confirm flight',
     confirmAirline: 'Airline',
     confirmPrice: 'Price',
-    confirmBaggageQuestion: 'Do you need baggage?',
-    baggageYes: 'Yes',
-    baggageNo: 'No',
     confirmButton: 'Confirm',
 
     // SubscriptionDetailPage

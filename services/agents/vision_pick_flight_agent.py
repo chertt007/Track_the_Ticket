@@ -1,9 +1,8 @@
 """
 Stage B — on the airline's search-results page, pick the specific flight by
-departure time, choose the requested fare (with/without checked baggage),
-and stop on a screen where the final price is visible.
+departure time and stop on a screen where the final price is visible.
 
-Entry point: pick_flight(page, ..., need_baggage)
+Entry point: pick_flight(page, ...)
 
 Returns one of three outcomes via the (ok, no_match) tuple:
   - ok=True,  no_match=False — agent reached the price view; caller can screenshot.
@@ -28,10 +27,6 @@ page is already open in the browser.
 CONTEXT:
 - Wanted flight: {origin} → {destination} on {date}, departing at {time}.
   {flight_number_line}
-- Baggage required: {baggage_required}
-  * TRUE  = passenger needs a checked bag — match the fare that includes it.
-  * FALSE = passenger does NOT need a checked bag — match the cheapest fare
-    that excludes it.
 
 YOUR DECISION ON EVERY SCREENSHOT — IS THE LIST VIEW ALREADY ENOUGH?
 
@@ -39,10 +34,8 @@ The results page often shows, for each flight, both the schedule AND the price
 of one or more fare tiers (e.g. "Basic 4990 ₽" / "Standard 6490 ₽"). If for the
 matching flight you can see, in the current screenshot, ALL of:
   (a) the correct departure time and route,
-  (b) a clearly visible price,
-  (c) the price corresponds to the requested baggage option (the matching tier
-      is visible — Basic-like for FALSE, Standard-like with bag icon for TRUE),
-  (d) one adult, economy is the implicit default,
+  (b) a clearly visible price (cheapest tier is fine),
+  (c) one adult, economy is the implicit default,
 
 → then the agent is DONE. Reply with the single word "Done" and STOP.
    Do NOT click into the flight to "verify" the price. The list view is
@@ -50,13 +43,12 @@ matching flight you can see, in the current screenshot, ALL of:
 
 DRILL DOWN ONLY WHEN NEEDED:
 
-If the list view does NOT clearly show the price for the requested baggage
-option (e.g. only one combined price, or the fare tiers are hidden behind
-"Select" buttons), THEN:
+If the list view does NOT clearly show the price (e.g. it is hidden behind
+a "Select" button), THEN:
   1. Click the matching flight to open its fare options.
-  2. Pick the cheapest fare matching the baggage requirement above.
-  3. Stop on the FIRST screen where the final price for one adult, economy,
-     with the correct baggage choice, is clearly visible.
+  2. Pick the cheapest fare visible.
+  3. Stop on the FIRST screen where the final price for one adult, economy
+     is clearly visible.
 
 DO NOT:
 - Fill any personal data (name, email, phone, document, payment details).
@@ -82,7 +74,6 @@ async def pick_flight(
     destination_iata: str,
     departure_date: str,
     departure_time: str,
-    need_baggage: bool,
     flight_number: Optional[str] = None,
 ) -> tuple[bool, bool, list[dict]]:
     """
@@ -99,7 +90,7 @@ async def pick_flight(
     """
     logger.info(
         f"[vision_pick_flight_agent] called | {origin_iata}→{destination_iata} on {departure_date} "
-        f"at {departure_time} | flight_number={flight_number} | need_baggage={need_baggage}"
+        f"at {departure_time} | flight_number={flight_number}"
     )
 
     flight_number_line = (
@@ -114,7 +105,6 @@ async def pick_flight(
         date=departure_date,
         time=departure_time,
         flight_number_line=flight_number_line,
-        baggage_required="TRUE" if need_baggage else "FALSE",
     )
 
     ok, final_text, actions = await run_agent_loop(

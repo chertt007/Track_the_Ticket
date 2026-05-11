@@ -47,13 +47,12 @@ class _PriceLike(Protocol):
 
 
 class _JobLike(Protocol):
-    subscription_id: int
+    subscription_id: str
     airline_name: str
     origin: str
     destination: str
     departure_date: str
     departure_time: str
-    need_baggage: bool
 
 
 def _format_amount(amount: Decimal) -> str:
@@ -66,13 +65,12 @@ def _format_amount(amount: Decimal) -> str:
 
 def _format_caption(job: _JobLike, price: Optional[_PriceLike]) -> str:
     """Build the HTML caption sent to Telegram."""
-    bag_line = "с багажом" if job.need_baggage else "без багажа"
     checked_at = datetime.now().strftime("%d.%m.%Y %H:%M")
 
     header = (
         f"✈️ <b>{html.escape(job.origin)} → {html.escape(job.destination)}</b>\n"
         f"{html.escape(job.airline_name)} · {html.escape(job.departure_date)}"
-        f" · {html.escape(job.departure_time)} · {bag_line}"
+        f" · {html.escape(job.departure_time)}"
     )
     if price is None:
         body = "\n\n⚠️ Цену не удалось считать"

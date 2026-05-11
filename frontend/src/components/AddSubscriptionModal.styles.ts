@@ -134,44 +134,4 @@ export const modalStyles = {
     color: berryPalette.raspberry,
   } as SxProps<Theme>,
 
-  baggageSection: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 1.5,
-    mt: 0.5,
-  } as SxProps<Theme>,
-
-  baggageLabelRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 1,
-  } as SxProps<Theme>,
-
-  baggageIcon: {
-    fontSize: 20,
-    color: 'text.secondary',
-  } as SxProps<Theme>,
-
-  baggageToggleGroup: {
-    gap: 1,
-    '& .MuiToggleButtonGroup-grouped': {
-      borderRadius: '20px !important',
-      border: `1px solid ${alpha(berryPalette.rose, 0.4)} !important`,
-      px: 3,
-      py: 0.75,
-      fontWeight: 600,
-      fontSize: '0.875rem',
-      textTransform: 'none',
-      minWidth: 80,
-      color: berryPalette.berry,
-      '&.Mui-selected': {
-        background: `linear-gradient(135deg, ${berryPalette.rose}, ${berryPalette.raspberry})`,
-        color: '#fff',
-        borderColor: 'transparent !important',
-      },
-      '&:hover:not(.Mui-selected)': {
-        background: alpha(berryPalette.rose, 0.1),
-      },
-    },
-  } as SxProps<Theme>,
 }

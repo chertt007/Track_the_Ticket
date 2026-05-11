@@ -57,7 +57,6 @@ export interface CreateSubscriptionPayload {
   airline: string | null
   airline_iata: string | null
   airline_domain: string | null
-  baggage_info: string | null
 }
 
 export const createSubscription = async (payload: CreateSubscriptionPayload) => {

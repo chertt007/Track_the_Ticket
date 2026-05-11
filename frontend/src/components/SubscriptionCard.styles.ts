@@ -38,12 +38,6 @@ export const cardStyles = {
     gap: 2,
   } as SxProps<Theme>,
 
-  baggageBox: {
-    display: 'flex',
-    alignItems: 'flex-end',
-    gap: 0.5,
-  } as SxProps<Theme>,
-
   metaText: {
     mt: 0.5,
     display: 'block',
@@ -191,12 +185,6 @@ export const cardStyles = {
   landIcon: {
     color: berryPalette.berry,
     fontSize: 20,
-  } as SxProps<Theme>,
-
-  luggageIcon: {
-    fontSize: 14,
-    color: 'text.secondary',
-    mb: 0.2,
   } as SxProps<Theme>,
 
   // ── Delete confirm dialog ──────────────────────────────────────────────

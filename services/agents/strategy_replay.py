@@ -45,14 +45,14 @@ REPLAY_DELAY_BETWEEN_ACTIONS = 2.5
 INITIAL_REPLAY_DELAY = 15.0
 
 
-def load_strategy(subscription_id: int) -> Optional[dict]:
+def load_strategy(subscription_id: str) -> Optional[dict]:
     """Return the saved strategy dict for this subscription, or None."""
     with SessionLocal() as db:
         return _db_get_strategy(db, subscription_id)
 
 
 def save_strategy(
-    subscription_id: int,
+    subscription_id: str,
     airline_url: str,
     viewport: tuple[int, int],
     actions: list[dict],
@@ -68,7 +68,7 @@ def save_strategy(
         )
 
 
-def discard_strategy(subscription_id: int) -> None:
+def discard_strategy(subscription_id: str) -> None:
     """Remove the strategy row (e.g. after a replay failure)."""
     with SessionLocal() as db:
         _db_delete_strategy(db, subscription_id)

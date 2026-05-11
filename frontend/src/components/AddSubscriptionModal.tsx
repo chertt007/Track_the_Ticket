@@ -8,13 +8,9 @@ import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
 import Box from '@mui/material/Box'
 import CircularProgress from '@mui/material/CircularProgress'
-import Divider from '@mui/material/Divider'
 import Fade from '@mui/material/Fade'
-import ToggleButton from '@mui/material/ToggleButton'
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import LinkIcon from '@mui/icons-material/Link'
 import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff'
-import LuggageIcon from '@mui/icons-material/Luggage'
 import { useT } from '../hooks/useT'
 import { useLocale } from '../hooks/useLocale'
 import { parseTicketUrl } from '../api'
@@ -38,7 +34,6 @@ interface ParsedData {
   currency: string
   passengers: number | null
   is_round_trip: boolean
-  baggage_info: string | null
   flight_number: string | null
   ticket_sign: string | null
 }
@@ -57,7 +52,6 @@ export default function AddSubscriptionModal({ open, onClose }: Props) {
   const [url, setUrl] = useState('')
   const [error, setError] = useState('')
   const [parsedData, setParsedData] = useState<ParsedData | null>(null)
-  const [needsBaggage, setNeedsBaggage] = useState<boolean | null>(null)
 
   const validate = (): string => {
     const trimmed = url.trim()
@@ -75,7 +69,6 @@ export default function AddSubscriptionModal({ open, onClose }: Props) {
     parseTicketUrl(url.trim())
       .then((data) => {
         setParsedData(data)
-        setNeedsBaggage(null)
         setStep('confirm')
       })
       .catch((e) => {
@@ -97,7 +90,6 @@ export default function AddSubscriptionModal({ open, onClose }: Props) {
       airline: parsedData.airline ?? parsedData.airline_iata ?? null,
       airline_iata: parsedData.airline_iata ?? null,
       airline_domain: null,
-      baggage_info: needsBaggage ? 'with_baggage' : 'no_baggage',
     }))
     handleClose()
   }
@@ -112,7 +104,6 @@ export default function AddSubscriptionModal({ open, onClose }: Props) {
     setUrl('')
     setError('')
     setParsedData(null)
-    setNeedsBaggage(null)
     onClose()
   }
 
@@ -228,30 +219,6 @@ export default function AddSubscriptionModal({ open, onClose }: Props) {
                 </Box>
 
               </Box>
-
-              {/* Baggage question */}
-              <Divider sx={{ mb: 2 }} />
-              <Box sx={s.baggageSection}>
-                <Box sx={s.baggageLabelRow}>
-                  <LuggageIcon sx={s.baggageIcon} />
-                  <Typography variant="body2" fontWeight={600}>
-                    {t('confirmBaggageQuestion')}
-                  </Typography>
-                </Box>
-                <ToggleButtonGroup
-                  exclusive
-                  value={needsBaggage}
-                  onChange={(_, val) => { if (val !== null) setNeedsBaggage(val) }}
-                  sx={s.baggageToggleGroup}
-                >
-                  <ToggleButton value={true}>
-                    {t('baggageYes')}
-                  </ToggleButton>
-                  <ToggleButton value={false}>
-                    {t('baggageNo')}
-                  </ToggleButton>
-                </ToggleButtonGroup>
-              </Box>
             </Box>
           </Fade>
         )}
@@ -281,11 +248,7 @@ export default function AddSubscriptionModal({ open, onClose }: Props) {
             <Button variant="outlined" onClick={handleBack}>
               {t('backLink')}
             </Button>
-            <Button
-              variant="contained"
-              onClick={handleConfirm}
-              disabled={needsBaggage === null}
-            >
+            <Button variant="contained" onClick={handleConfirm}>
               {t('confirmButton')}
             </Button>
           </>

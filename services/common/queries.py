@@ -118,7 +118,7 @@ def unlink_telegram(db: Session, user_id: str) -> None:
     logger.info(f"[queries] tg unlinked user={user_id}")
 
 
-def get_subscription(db: Session, subscription_id: int) -> Optional[Subscription]:
+def get_subscription(db: Session, subscription_id: str) -> Optional[Subscription]:
     """Fetch a single subscription by primary key. Returns None if not found."""
     return db.get(Subscription, subscription_id)
 
@@ -136,7 +136,7 @@ def save_airline(db: Session, name: str, url: str) -> None:
     logger.info(f"[queries] saved airline '{name}' → {url}")
 
 
-def get_strategy(db: Session, subscription_id: int) -> Optional[dict]:
+def get_strategy(db: Session, subscription_id: str) -> Optional[dict]:
     """
     Return the saved strategy for this subscription as a dict shaped like
     the legacy JSON file (so callers like replay_strategy keep working
@@ -156,7 +156,7 @@ def get_strategy(db: Session, subscription_id: int) -> Optional[dict]:
 
 def upsert_strategy(
     db: Session,
-    subscription_id: int,
+    subscription_id: str,
     airline_url: str,
     viewport: tuple[int, int],
     actions: list[dict],
@@ -182,7 +182,7 @@ def upsert_strategy(
     logger.info(f"[queries] upserted strategy sub={subscription_id} steps={len(actions)}")
 
 
-def delete_strategy(db: Session, subscription_id: int) -> None:
+def delete_strategy(db: Session, subscription_id: str) -> None:
     """Remove the saved strategy for this subscription, if any."""
     deleted = db.query(Strategy).filter(Strategy.subscription_id == subscription_id).delete()
     db.commit()
@@ -190,7 +190,7 @@ def delete_strategy(db: Session, subscription_id: int) -> None:
         logger.info(f"[queries] deleted strategy sub={subscription_id}")
 
 
-def get_latest_price_check(db: Session, subscription_id: int) -> Optional[PriceCheck]:
+def get_latest_price_check(db: Session, subscription_id: str) -> Optional[PriceCheck]:
     """
     Return the most recent price-check row for this subscription, or None.
     Used by the API to populate "last checked" info on subscription cards.
@@ -205,7 +205,7 @@ def get_latest_price_check(db: Session, subscription_id: int) -> Optional[PriceC
 
 def save_price_check(
     db: Session,
-    subscription_id: int,
+    subscription_id: str,
     amount: Optional[Decimal],
     currency: Optional[str],
     via: str,

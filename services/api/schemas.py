@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Optional
-from pydantic import BaseModel, computed_field, model_validator
+from pydantic import BaseModel, model_validator
 
 
 class SubscriptionCreate(BaseModel):
@@ -9,9 +9,6 @@ class SubscriptionCreate(BaseModel):
     destination_iata: str
     airline:          str
     departure_date:   str            # "YYYY-MM-DD"
-
-    # Frontend sends 'with_baggage' | 'no_baggage'
-    baggage_info:     str
 
     # Optional
     source_url:       Optional[str] = None
@@ -30,17 +27,11 @@ class SubscriptionCreate(BaseModel):
             raise ValueError("airline is required")
         if not self.departure_date:
             raise ValueError("departure_date is required")
-        if self.baggage_info not in ("with_baggage", "no_baggage"):
-            raise ValueError("baggage_info must be 'with_baggage' or 'no_baggage'")
         return self
-
-    @property
-    def need_baggage(self) -> bool:
-        return self.baggage_info == "with_baggage"
 
 
 class SubscriptionOut(BaseModel):
-    id:               int
+    id:               str
     user_id:          str
 
     # Named to match frontend mapSubscription expectations
@@ -48,13 +39,11 @@ class SubscriptionOut(BaseModel):
     destination_iata: str
     airline:          str
     departure_date:   str
-    need_baggage:     bool
 
     source_url:       Optional[str] = None
     departure_time:   Optional[str] = None
     flight_number:    Optional[str] = None
     airline_iata:     Optional[str] = None
-    baggage_info:     str            # reconstructed: 'with_baggage' | 'no_baggage'
     is_active:        bool
     created_at:       str            # ISO string
     last_checked_at:  Optional[str] = None

@@ -9,7 +9,6 @@ import Tooltip from '@mui/material/Tooltip'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff'
 import FlightLandIcon from '@mui/icons-material/FlightLand'
-import LuggageIcon from '@mui/icons-material/Luggage'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import {
   ResponsiveContainer,
@@ -153,13 +152,6 @@ export default function SubscriptionDetailPage() {
           <Box sx={s.detailItem}>
             <Typography variant="caption" color="text.secondary">{t('departure')} (time)</Typography>
             <Typography variant="body2" fontWeight={600}>{sub.departureTime}</Typography>
-          </Box>
-          <Box sx={s.detailItem}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <LuggageIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
-              <Typography variant="caption" color="text.secondary">{t('baggage')}</Typography>
-            </Box>
-            <Typography variant="body2" fontWeight={600}>{sub.baggageInfo}</Typography>
           </Box>
           <Box sx={s.detailItem}>
             <Typography variant="caption" color="text.secondary">{t('lastChecked')}</Typography>

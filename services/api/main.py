@@ -103,8 +103,6 @@ def _sub_to_dict(sub: Subscription, latest: Optional[PriceCheck] = None) -> dict
         "departure_time":      sub.departure_time,
         "flight_number":       sub.flight_number,
         "airline_iata":        sub.airline_iata,
-        "need_baggage":        sub.need_baggage,
-        "baggage_info":        "with_baggage" if sub.need_baggage else "no_baggage",
         "source_url":          sub.source_url,
         "is_active":           sub.is_active,
         "created_at":          sub.created_at.isoformat(),
@@ -149,7 +147,6 @@ async def parse(req: ParseRequest) -> dict:
         "flight_number":    ticket.flight_number,
         "airline":          ticket.airline,
         "airline_iata":     ticket.airline_iata,
-        "baggage_info":     ticket.baggage_info,
         "is_round_trip":    ticket.is_round_trip,
         "price":            ticket.price,
         "currency":         ticket.currency,
@@ -177,7 +174,6 @@ def create_subscription(
         arrival_airport   = payload.destination_iata,
         airline           = payload.airline,
         departure_date    = payload.departure_date,
-        need_baggage      = payload.need_baggage,
         source_url        = payload.source_url,
         departure_time    = payload.departure_time,
         flight_number     = payload.flight_number,
@@ -205,7 +201,7 @@ def list_subscriptions(
 
 @app.delete("/subscriptions/{sub_id}")
 def delete_subscription(
-    sub_id: int,
+    sub_id: str,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
 ) -> dict:
@@ -297,7 +293,7 @@ def telegram_claim(
 
 @app.post("/subscriptions/{sub_id}/check")
 async def check_subscription(
-    sub_id: int,
+    sub_id: str,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
 ) -> dict:

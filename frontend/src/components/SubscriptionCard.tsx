@@ -16,7 +16,6 @@ import SyncIcon from '@mui/icons-material/Sync'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff'
 import FlightLandIcon from '@mui/icons-material/FlightLand'
-import LuggageIcon from '@mui/icons-material/Luggage'
 import CloseIcon from '@mui/icons-material/Close'
 import ButtonBase from '@mui/material/ButtonBase'
 import { useNavigate } from 'react-router-dom'
@@ -108,14 +107,10 @@ export default function SubscriptionCard({ subscription: sub }: Props) {
             <Typography variant="caption" color="text.secondary">{t('departure')}</Typography>
             <Typography variant="body2" fontWeight={600}>{formattedDate} · {sub.departureTime}</Typography>
           </Box>
-          <Box sx={s.baggageBox}>
-            <LuggageIcon sx={s.luggageIcon} />
-            <Typography variant="body2" color="text.secondary">{sub.baggageInfo}</Typography>
-          </Box>
         </Box>
 
         <Typography variant="caption" color="text.secondary" sx={s.metaText}>
-          #{sub.id} · {t('lastChecked')}: {sub.lastCheckedAt
+          #{sub.id.slice(0, 8)} · {t('lastChecked')}: {sub.lastCheckedAt
             ? new Date(sub.lastCheckedAt).toLocaleString(locale, {
                 day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
               })

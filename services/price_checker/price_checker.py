@@ -76,7 +76,7 @@ SCREENSHOT_RETENTION_DAYS = 7
 @dataclass(frozen=True)
 class _Job:
     """All per-subscription parameters used across the price-check pipeline."""
-    subscription_id: int
+    subscription_id: str
     user_id: str
     airline_name: str
     airline_url: str
@@ -85,10 +85,9 @@ class _Job:
     departure_date: str
     departure_time: str
     flight_number: Optional[str]
-    need_baggage: bool
 
 
-async def _resolve_job(subscription_id: int) -> Optional[_Job]:
+async def _resolve_job(subscription_id: str) -> Optional[_Job]:
     """
     Fetch subscription details and the airline's website URL.
 
@@ -115,7 +114,6 @@ async def _resolve_job(subscription_id: int) -> Optional[_Job]:
         departure_date = sub.departure_date
         departure_time = sub.departure_time
         flight_number = sub.flight_number
-        need_baggage = bool(sub.need_baggage)
 
         airline_url = get_airline_url_by_name(db, airline_name)
         if airline_url is None:
@@ -140,7 +138,6 @@ async def _resolve_job(subscription_id: int) -> Optional[_Job]:
         departure_date=departure_date,
         departure_time=departure_time,
         flight_number=flight_number,
-        need_baggage=need_baggage,
     )
 
 
@@ -358,7 +355,6 @@ async def _run_llm_pipeline_and_record(browser: Browser, job: _Job) -> None:
             destination_iata=job.destination,
             departure_date=job.departure_date,
             departure_time=job.departure_time,
-            need_baggage=job.need_baggage,
             flight_number=job.flight_number,
         )
         if no_match:
@@ -404,7 +400,7 @@ async def _run_llm_pipeline_and_record(browser: Browser, job: _Job) -> None:
         await context.close()
 
 
-async def check_price(subscription_id: int) -> None:
+async def check_price(subscription_id: str) -> None:
     """
     Trigger a price re-check for the given subscription.
 
@@ -430,8 +426,7 @@ async def check_price(subscription_id: int) -> None:
 
     logger.info(
         f"[price_checker] sub id={job.subscription_id} | {job.airline_name} "
-        f"{job.origin}→{job.destination} on {job.departure_date} {job.departure_time} | "
-        f"baggage={job.need_baggage}"
+        f"{job.origin}→{job.destination} on {job.departure_date} {job.departure_time}"
     )
 
     strategy = load_strategy(job.subscription_id)

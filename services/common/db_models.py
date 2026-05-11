@@ -1,6 +1,20 @@
+import uuid
 from datetime import datetime
 from sqlalchemy import BigInteger, Boolean, Column, DateTime, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy.orm import relationship
 from .database import Base
+
+
+def _new_id() -> str:
+    """Opaque, globally unique subscription/PK string.
+
+    32-char uuid4 hex — never reused, no enumeration, no collision risk.
+    Used instead of integer auto-increment to avoid orphaned-FK reuse: when
+    a row is deleted SQLite happily hands the same INTEGER PK to the next
+    INSERT, which let stale rows in child tables (e.g. `strategies`) match
+    a brand-new subscription.
+    """
+    return uuid.uuid4().hex
 
 
 class User(Base):
@@ -39,7 +53,7 @@ class TelegramLinkToken(Base):
 class Subscription(Base):
     __tablename__ = "subscriptions"
 
-    id                = Column(Integer, primary_key=True, index=True)
+    id                = Column(String(32), primary_key=True, default=_new_id)
     user_id           = Column(String, ForeignKey("users.id"), nullable=False, index=True)
 
     # Required fields
@@ -47,7 +61,6 @@ class Subscription(Base):
     arrival_airport   = Column(String, nullable=False)
     airline           = Column(String, nullable=False)
     departure_date    = Column(String, nullable=False)   # "YYYY-MM-DD"
-    need_baggage      = Column(Boolean, nullable=False)
 
     # Optional fields from the parser
     source_url        = Column(String, nullable=True)
@@ -57,6 +70,19 @@ class Subscription(Base):
 
     is_active         = Column(Boolean, default=True, nullable=False)
     created_at        = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # ORM-level cascade: deleting a Subscription deletes all child
+    # strategies/price_checks. Without this an orphaned strategy from a
+    # deleted subscription could match a future subscription that reused
+    # the same id (no longer possible with uuid PKs, but the cascade is
+    # still the correct contract — child rows have no meaning without
+    # their parent).
+    strategies    = relationship(
+        "Strategy", cascade="all, delete-orphan", passive_deletes=False
+    )
+    price_checks  = relationship(
+        "PriceCheck", cascade="all, delete-orphan", passive_deletes=False
+    )
 
 
 class Airline(Base):
@@ -78,7 +104,7 @@ class PriceCheck(Base):
     __tablename__ = "price_checks"
 
     id              = Column(Integer, primary_key=True, index=True)
-    subscription_id = Column(Integer, ForeignKey("subscriptions.id"), nullable=False, index=True)
+    subscription_id = Column(String(32), ForeignKey("subscriptions.id"), nullable=False, index=True)
     checked_at      = Column(DateTime, default=datetime.utcnow, nullable=False)
     amount          = Column(Numeric(10, 2), nullable=True)
     currency        = Column(String, nullable=True)
@@ -104,7 +130,7 @@ class Strategy(Base):
     __tablename__ = "strategies"
 
     id              = Column(Integer, primary_key=True, index=True)
-    subscription_id = Column(Integer, ForeignKey("subscriptions.id"), unique=True, nullable=False, index=True)
+    subscription_id = Column(String(32), ForeignKey("subscriptions.id"), unique=True, nullable=False, index=True)
     airline_url     = Column(String, nullable=False)
     viewport_w      = Column(Integer, nullable=False)
     viewport_h      = Column(Integer, nullable=False)

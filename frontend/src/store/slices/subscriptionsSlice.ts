@@ -6,7 +6,7 @@ import { apiClient, createSubscription, type CreateSubscriptionPayload } from '.
 // ── API response type (snake_case from FastAPI) ───────────────────────────────
 
 interface SubscriptionApiResponse {
-  id: number
+  id: string
   source_url: string
   status: string
   origin_iata: string | null
@@ -15,7 +15,6 @@ interface SubscriptionApiResponse {
   departure_time: string | null
   flight_number: string | null
   airline: string | null
-  baggage_info: string | null
   is_active: boolean
   last_checked_at: string | null
   last_amount: number | null
@@ -36,6 +35,8 @@ function resolveScreenshotUrl(path: string | null): string | null {
 
 function mapSubscription(raw: SubscriptionApiResponse): Subscription {
   return {
+    // Defensive cast: API now returns uuid hex strings, but historical
+    // builds returned integers — coerce so `id.slice()` etc. always works.
     id:                String(raw.id),
     flightNumber:      raw.flight_number  ?? '—',
     airline:           raw.airline        ?? '—',
@@ -43,7 +44,6 @@ function mapSubscription(raw: SubscriptionApiResponse): Subscription {
     destinationIata:   raw.destination_iata ?? '???',
     departureDate:     raw.departure_date ?? '—',
     departureTime:     raw.departure_time?.slice(0, 5) ?? '—', // "08:30:00" → "08:30"
-    baggageInfo:       raw.baggage_info   ?? '—',
     sourceUrl:         raw.source_url,
     isActive:          raw.is_active,
     lastCheckedAt:     raw.last_checked_at,
@@ -133,7 +133,6 @@ const subscriptionsSlice = createSlice({
         destinationIata:   '???',
         departureDate:     '—',
         departureTime:     '—',
-        baggageInfo:       '—',
         sourceUrl:         action.payload.url,
         isActive:          true,
         lastCheckedAt:     null,

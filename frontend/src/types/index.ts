@@ -8,7 +8,6 @@ export interface Subscription {
   destinationIata: string
   departureDate: string
   departureTime: string
-  baggageInfo: string
   sourceUrl: string
   isActive: boolean
   lastCheckedAt: string | null
