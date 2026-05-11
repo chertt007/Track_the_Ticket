@@ -77,6 +77,7 @@ SCREENSHOT_RETENTION_DAYS = 7
 class _Job:
     """All per-subscription parameters used across the price-check pipeline."""
     subscription_id: int
+    user_id: str
     airline_name: str
     airline_url: str
     origin: str
@@ -107,6 +108,7 @@ async def _resolve_job(subscription_id: int) -> Optional[_Job]:
             logger.warning(f"[price_checker] subscription id={subscription_id} not found")
             raise SubscriptionNotFoundError(subscription_id)
 
+        user_id = sub.user_id
         airline_name = sub.airline
         origin = sub.departure_airport
         destination = sub.arrival_airport
@@ -130,6 +132,7 @@ async def _resolve_job(subscription_id: int) -> Optional[_Job]:
 
     return _Job(
         subscription_id=subscription_id,
+        user_id=user_id,
         airline_name=airline_name,
         airline_url=airline_url,
         origin=origin,
@@ -252,6 +255,24 @@ async def _save_check_result(
         logger.error(
             f"[price_checker] sub id={job.subscription_id} "
             f"failed to persist price_check row: {exc}",
+            exc_info=True,
+        )
+
+    # Telegram delivery is best-effort: a missed notification must not crash
+    # the price-check pipeline (the price_checks row above is the source of
+    # truth). The notifier itself swallows network/API errors internally,
+    # but we wrap defensively in case a future bug raises something else.
+    try:
+        from notifier.telegram_notifier import send_check_result
+        await send_check_result(
+            user_id=job.user_id,
+            job=job,
+            price=price,
+            screenshot_path=screenshot_path,
+        )
+    except Exception as exc:
+        logger.error(
+            f"[price_checker] sub id={job.subscription_id} notify failed: {exc}",
             exc_info=True,
         )
 
