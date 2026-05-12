@@ -1,0 +1,10 @@
+app.track-the-ticket.com {
+    reverse_proxy frontend:80
+}
+
+api.track-the-ticket.com {
+    reverse_proxy api:8000
+    request_body {
+        max_size 10MB
+    }
+}

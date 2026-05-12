@@ -1,0 +1,55 @@
+services:
+
+  # ── Caddy: TLS termination + reverse proxy ────────────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - tttnet
+    restart: unless-stopped
+
+  # ── Backend API (FastAPI + Playwright + SQLite) ───────────────────────────
+  api:
+    image: ghcr.io/${GITHUB_REPOSITORY}/api:latest
+    env_file: .env
+    volumes:
+      - app_data:/data
+      - ./firebase-sa.json:/run/secrets/firebase-sa.json:ro
+    networks:
+      - tttnet
+    restart: unless-stopped
+
+  # ── Telegram bot ──────────────────────────────────────────────────────────
+  bot:
+    image: ghcr.io/${GITHUB_REPOSITORY}/api:latest
+    command: python -m bot
+    env_file: .env
+    volumes:
+      - app_data:/data
+      - ./firebase-sa.json:/run/secrets/firebase-sa.json:ro
+    networks:
+      - tttnet
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # ── Frontend (nginx + static build) ──────────────────────────────────────
+  frontend:
+    image: ghcr.io/${GITHUB_REPOSITORY}/frontend:latest
+    networks:
+      - tttnet
+    restart: unless-stopped
+
+networks:
+  tttnet:
+
+volumes:
+  app_data:
+  caddy_data:
+  caddy_config:

@@ -20,6 +20,11 @@ COPY run.py ./
 COPY common/ ./common/
 COPY link_parser/ ./link_parser/
 COPY api/ ./api/
+COPY bot/ ./bot/
+COPY notifier/ ./notifier/
+COPY scheduler/ ./scheduler/
+COPY agents/ ./agents/
+COPY price_checker/ ./price_checker/
 
 EXPOSE 8000
 CMD ["python", "run.py"]

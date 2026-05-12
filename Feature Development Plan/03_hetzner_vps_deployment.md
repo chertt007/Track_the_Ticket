@@ -61,7 +61,7 @@
 ## Этапы (выполняем по порядку)
 
 1. [Подготовка VPS](#1-подготовка-vps) — переустановка ОС, юзер `deploy`, Docker, ufw, fail2ban
-2. [Покупка домена и DNS](#2-покупка-домена-и-dns) — A-записи на IP VPS
+2. ✅ [Покупка домена и DNS](#2-покупка-домена-и-dns) — A-записи на IP VPS
 3. [Артефакты в репо](#3-артефакты-в-репо) — Dockerfile фронта, prod-compose, Caddyfile
 4. [Секреты и `.env`](#4-секреты-и-env) — что и где лежит на VPS
 5. [Firebase Console](#5-firebase-console) — Authorized domains
@@ -74,7 +74,7 @@
 
 ## 1. Подготовка VPS
 
-### 1.1. Переустановка ОС
+### ✅ 1.1. Переустановка ОС
 
 Через Hetzner Cloud Console → сервер `ubuntu-4gb-hel1-1` → **Rebuild**
 → Ubuntu 24.04. Старые данные и снапшоты затрутся — убедиться, что
@@ -82,7 +82,7 @@
 
 После rebuild SSH-ключ из Cloud Console будет добавлен в `root` автоматически.
 
-### 1.2. Базовая настройка
+### ✅ 1.2. Базовая настройка
 
 ```bash
 ssh root@204.168.165.83
@@ -105,7 +105,7 @@ chmod 700 /home/deploy/.ssh
 chmod 600 /home/deploy/.ssh/authorized_keys
 ```
 
-### 1.3. Docker
+### ✅ 1.3. Docker
 
 ```bash
 # Официальный Docker repo
@@ -126,7 +126,7 @@ usermod -aG docker deploy
 sudo -u deploy docker run --rm hello-world
 ```
 
-### 1.4. Firewall
+### ✅ 1.4. Firewall
 
 ```bash
 ufw allow OpenSSH
@@ -136,7 +136,7 @@ ufw --force enable
 ufw status
 ```
 
-### 1.5. SSH hardening
+### ✅ 1.5. SSH hardening
 
 В `/etc/ssh/sshd_config` (через `sudo nano` или sed):
 
