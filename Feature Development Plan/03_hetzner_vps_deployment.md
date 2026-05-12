@@ -1,356 +1,400 @@
-# Деплой на Hetzner VPS
+# Деплой на Hetzner VPS (Docker + GitHub Actions)
 
-> **Цель этого документа:** конкретный пошаговый план переноса
-> Track the Ticket из локального dev-окружения на VPS Hetzner Cloud.
+> **Цель этого документа:** пошаговый план переноса Track the Ticket
+> на существующую VPS Hetzner с использованием Docker Compose,
+> автоматическим HTTPS через Caddy и авто-деплоем по push в `main`
+> через GitHub Actions.
+>
 > Общий чеклист переменных/секретов смотри в
 > [deployment_checklist.md](deployment_checklist.md) — этот файл его
 > *дополняет* провайдер-специфичными шагами.
 
 ---
 
-## 1. Выбор машины
+## Целевая архитектура
 
-Сейчас в проекте один пользователь, до ~5 подписок. Шедулер крутит
-проверки **последовательно** (см. [02_concurrent_price_checks.md](02_concurrent_price_checks.md)).
-
-| Конфиг | RAM | vCPU | Цена/мес | Когда подходит |
-|---|---|---|---|---|
-| **CX22** | 4 ГБ | 2 | ~€4 | ✅ Стартовая. 1 пользователь, до 10 подписок, sequential checks |
-| CX32 | 8 ГБ | 4 | ~€8 | Когда включим параллельные проверки (3-5) |
-| CX42 | 16 ГБ | 8 | ~€16 | 10+ юзеров, параллель 5+, готовность к Postgres |
-
-**Локация:** Falkenstein (DE) или Helsinki (FI) — обе ОК. Helsinki чуть
-ближе к израильским юзерам по латентности, но разница ~30 мс — не
-критично для нашего юзкейса (фоновые проверки + редкие HTTP-запросы).
-
-**ОС:** Ubuntu 24.04 LTS — стандарт, есть в шаблонах Hetzner, поддержка
-до 2029.
-
----
-
-## 2. Подготовка VPS (one-time)
-
-```bash
-# Создаётся через Hetzner Cloud Console или CLI (hcloud)
-# Например:
-#   hcloud server create --name ttt-prod --type cx22 --image ubuntu-24.04 \
-#                        --location fsn1 --ssh-key <your-key-id>
-
-# Подключаемся:
-ssh root@<vps-ip>
-
-# Создаём непривилегированного пользователя для приложения
-adduser --disabled-password --gecos "" ttt
-usermod -aG sudo ttt   # временно, для setup; потом убрать
-
-# Обновление + базовые пакеты
-apt update && apt upgrade -y
-apt install -y python3.12 python3.12-venv python3-pip git curl ufw nginx certbot python3-certbot-nginx
-
-# Node 20 (для билда фронта; на VPS можно билдить прямо тут или билдить локально и заливать dist/)
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-apt install -y nodejs
-
-# Playwright нужны системные зависимости Chromium — поставим после pip install
+```
+                    Internet
+                       │
+                       ▼ :443
+              ┌─────────────────┐
+              │      Caddy      │  ← TLS termination, авто Let's Encrypt
+              │   (Docker)      │
+              └────────┬────────┘
+                       │
+        ┌──────────────┼──────────────┐
+        ▼              ▼              ▼
+   app.domain   api.domain      (internal)
+   ┌─────────┐  ┌─────────┐    ┌─────────┐
+   │frontend │  │   api   │◄───┤   bot   │
+   │ nginx + │  │ FastAPI │    │aiogram  │
+   │static   │  │+Playwr. │    │         │
+   └─────────┘  └────┬────┘    └────┬────┘
+                     │              │
+                     ▼              │
+              ┌────────────┐ ◄──────┘
+              │  volumes   │
+              │ data/      │ ← SQLite + screenshots
+              └────────────┘
 ```
 
+Всё крутится в Docker. На хосте — только `docker`, `ufw`, `fail2ban`.
+Никакого Python/Node/nginx на самом хосте.
+
 ---
 
-## 3. Файрвол
+## Используемые ресурсы
+
+- **VPS:** существующий `ubuntu-4gb-hel1-1` (CX23: 2 vCPU, 4 GB RAM,
+  40 GB SSD, Helsinki, IP `204.168.165.83`). Этого хватит для 1
+  пользователя и до ~10 подписок с последовательными проверками.
+  Когда включим параллель (см. [02_concurrent_price_checks.md](02_concurrent_price_checks.md))
+  — отрескейлим в CX32 через Console за минуту.
+- **Домен:** покупается отдельно (~$10/год). В плане ниже обозначен
+  как `<домен>` — это полный домен второго уровня, напр. `tracktt.xyz`.
+  Поддомены: `app.<домен>` для фронта, `api.<домен>` для бэка.
+- **Образы:** хранятся в **GitHub Container Registry (ghcr.io)**,
+  билдятся в GitHub Actions, бесплатно для приватных репо.
+
+---
+
+## Этапы (выполняем по порядку)
+
+1. [Подготовка VPS](#1-подготовка-vps) — переустановка ОС, юзер `deploy`, Docker, ufw, fail2ban
+2. [Покупка домена и DNS](#2-покупка-домена-и-dns) — A-записи на IP VPS
+3. [Артефакты в репо](#3-артефакты-в-репо) — Dockerfile фронта, prod-compose, Caddyfile
+4. [Секреты и `.env`](#4-секреты-и-env) — что и где лежит на VPS
+5. [Firebase Console](#5-firebase-console) — Authorized domains
+6. [Первый деплой вручную](#6-первый-деплой-вручную) — pull, build, up
+7. [GitHub Actions CI/CD](#7-github-actions-cicd) — auto-deploy на push в main
+8. [Бэкапы](#8-бэкапы) — volume snapshots + cron
+9. [Hardening и observability](#9-hardening-и-observability) — fail2ban, логи, Sentry
+
+---
+
+## 1. Подготовка VPS
+
+### 1.1. Переустановка ОС
+
+Через Hetzner Cloud Console → сервер `ubuntu-4gb-hel1-1` → **Rebuild**
+→ Ubuntu 24.04. Старые данные и снапшоты затрутся — убедиться, что
+ничего важного на сервере нет.
+
+После rebuild SSH-ключ из Cloud Console будет добавлен в `root` автоматически.
+
+### 1.2. Базовая настройка
+
+```bash
+ssh root@204.168.165.83
+
+# Обновление
+apt update && apt upgrade -y
+
+# Базовые пакеты
+apt install -y ufw fail2ban ca-certificates curl gnupg
+
+# Создаём непривилегированного пользователя для деплоя
+adduser --disabled-password --gecos "" deploy
+usermod -aG sudo deploy
+
+# Копируем ssh-ключ от root к deploy
+mkdir -p /home/deploy/.ssh
+cp /root/.ssh/authorized_keys /home/deploy/.ssh/
+chown -R deploy:deploy /home/deploy/.ssh
+chmod 700 /home/deploy/.ssh
+chmod 600 /home/deploy/.ssh/authorized_keys
+```
+
+### 1.3. Docker
+
+```bash
+# Официальный Docker repo
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+chmod a+r /etc/apt/keyrings/docker.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+  https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" \
+  | tee /etc/apt/sources.list.d/docker.list
+
+apt update
+apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# Разрешаем deploy запускать docker без sudo
+usermod -aG docker deploy
+
+# Проверка
+sudo -u deploy docker run --rm hello-world
+```
+
+### 1.4. Firewall
 
 ```bash
 ufw allow OpenSSH
-ufw allow 80/tcp     # HTTP (для редиректа на HTTPS и certbot)
+ufw allow 80/tcp     # HTTP (редирект и ACME challenge)
 ufw allow 443/tcp    # HTTPS
-ufw enable
+ufw --force enable
+ufw status
 ```
 
-Порт 8000 (API) и 5173 (Vite dev) **наружу не открываем** — API
-проксируется через nginx, фронт билдится в статику.
+### 1.5. SSH hardening
+
+В `/etc/ssh/sshd_config` (через `sudo nano` или sed):
+
+```
+PasswordAuthentication no
+PermitRootLogin prohibit-password
+```
+
+```bash
+systemctl restart ssh
+```
+
+После этого root-login по паролю выключен, остаётся только ключ.
 
 ---
 
-## 4. Развёртывание кода
+## 2. Покупка домена и DNS
 
-```bash
-# Под пользователем ttt
-su - ttt
-git clone https://github.com/<your>/Track_the_Ticket.git /home/ttt/app
-cd /home/ttt/app
-
-# Backend venv
-python3.12 -m venv .venv
-source .venv/bin/activate
-pip install -U pip
-pip install -r services/requirements.txt
-playwright install chromium
-# Playwright допросит установить системные deps:
-playwright install-deps chromium    # требует sudo, под root заранее
-
-# Frontend
-cd frontend
-npm ci
-# .env.production создаём ниже, перед npm run build
-```
+1. Купить домен у любого регистратора (Namecheap, Cloudflare Registrar,
+   Porkbun). Для пет-проекта подходит `.xyz` / `.click` (~$1-3/год)
+   или `.com` (~$10/год).
+2. В DNS-настройках регистратора создать **две A-записи**:
+   - `app.<домен>` → `204.168.165.83`
+   - `api.<домен>` → `204.168.165.83`
+   (Можно также корневой `<домен>` → IP, опционально.)
+3. Подождать пропагации (обычно 5-30 минут). Проверка:
+   ```bash
+   dig +short app.<домен>
+   # Должно вернуть 204.168.165.83
+   ```
 
 ---
 
-## 5. Каталоги для данных
+## 3. Артефакты в репо
 
-```bash
-sudo mkdir -p /var/lib/track-the-ticket/{data,screenshots}
-sudo chown -R ttt:ttt /var/lib/track-the-ticket
-sudo chmod 750 /var/lib/track-the-ticket
+Все эти файлы будем создавать **на следующем этапе**, после того как
+VPS и домен готовы. Они коммитятся в репо — там нет секретов.
+
+### 3.1. `services/Dockerfile` (уже есть, дополним)
+
+Текущий Dockerfile собирает API. Бот будет использовать **тот же
+образ**, но запускаться с другим `command` через compose. Возможно
+понадобится докопировать `bot/` в образ.
+
+### 3.2. `frontend/Dockerfile` (новый)
+
+Multi-stage:
+- Stage 1 (`node:20-alpine`): `npm ci && npm run build` → `dist/`
+- Stage 2 (`nginx:alpine`): копирует `dist/` + минимальный nginx-конфиг
+  с SPA fallback (`try_files $uri /index.html`).
+
+Переменные `VITE_*` подставляются на этапе билда через `--build-arg`.
+Они становятся частью JS-бандла и **не являются секретами в обычном смысле**
+(Firebase API keys специально публичны, защита идёт через Authorized domains).
+
+### 3.3. `docker-compose.prod.yml` (новый, в корне)
+
+Четыре сервиса:
+- **api** — образ из ghcr.io (`ghcr.io/<owner>/track-the-ticket-api:latest`),
+  слушает `8000` *внутри* docker-сети, не пробрасывает наружу.
+- **bot** — тот же образ, `command: python -m bot`, зависит от api.
+- **frontend** — образ из ghcr.io (`ghcr.io/<owner>/track-the-ticket-frontend:latest`),
+  слушает `80` *внутри* docker-сети.
+- **caddy** — `caddy:2-alpine`, единственный сервис с пробросом
+  портов 80/443 наружу. Читает `Caddyfile`, сам получает и продлевает
+  Let's Encrypt сертификаты.
+
+Volumes:
+- `app_data` → `/data` (SQLite + screenshots, монтируется в api и bot)
+- `caddy_data` → `/data` (сертификаты Caddy — важно сохранить, иначе
+  при пересоздании контейнера Let's Encrypt может зарейтлимитить)
+- `caddy_config` → `/config`
+
+Все сервисы подключаются к одной сети `tttnet`.
+
+### 3.4. `Caddyfile` (новый, в корне)
+
+```
+app.<домен> {
+    reverse_proxy frontend:80
+}
+
+api.<домен> {
+    reverse_proxy api:8000
+    request_body {
+        max_size 10MB
+    }
+}
 ```
 
-Они переопределяются env-переменными `DATABASE_PATH` и `SCREENSHOTS_DIR`
-(см. [deployment_checklist.md](deployment_checklist.md) §2).
+Caddy сам выпустит сертификаты при первом запросе и будет продлевать
+автоматически. Никакого certbot.
+
+### 3.5. `.env.prod.example` (новый, в корне)
+
+Шаблон без секретов, коммитится в репо. Реальный `.env` создаётся
+только на VPS (см. §4).
 
 ---
 
-## 6. Секреты
+## 4. Секреты и `.env`
+
+На VPS:
 
 ```bash
-sudo mkdir -p /etc/track-the-ticket
-sudo chmod 750 /etc/track-the-ticket
-# Заливаем (scp/rsync с локалки):
-#   - firebase-sa.json  (mode 600, owner ttt)
-sudo chown ttt:ttt /etc/track-the-ticket/firebase-sa.json
-sudo chmod 600 /etc/track-the-ticket/firebase-sa.json
+sudo -u deploy mkdir -p /home/deploy/track-the-ticket
+cd /home/deploy/track-the-ticket
 ```
 
----
+Сюда кладём:
+- `.env` (mode 600, owner deploy) — заполнен по `.env.prod.example`
+- `firebase-sa.json` (mode 600) — Firebase Admin service account
+- `docker-compose.prod.yml` (копия из репо)
+- `Caddyfile` (копия из репо)
 
-## 7. Environment файл
-
-`/etc/track-the-ticket/env` (mode 640, owner root:ttt):
+`.env` содержит:
 
 ```bash
-# Anthropic
-ANTHROPIC_API_KEY=sk-ant-...
+# Где живут данные внутри volume
+DATABASE_PATH=/data/tracktheticket.db
+SCREENSHOTS_DIR=/data/screenshots
 
 # Firebase
-FIREBASE_SERVICE_ACCOUNT_PATH=/etc/track-the-ticket/firebase-sa.json
+FIREBASE_SERVICE_ACCOUNT_PATH=/run/secrets/firebase-sa.json
 
-# Paths
-DATABASE_PATH=/var/lib/track-the-ticket/data/tracktheticket.db
-SCREENSHOTS_DIR=/var/lib/track-the-ticket/screenshots
+# Anthropic
+ANTHROPIC_API_KEY=sk-ant-...
 
 # Telegram
 TELEGRAM_BOT_TOKEN=...
 TELEGRAM_BOT_USERNAME=track_the_ticket_bot
 TELEGRAM_INTERNAL_SECRET=<openssl rand -hex 32>
-API_BASE_URL=http://127.0.0.1:8000
+API_BASE_URL=http://api:8000
 
-# Scheduler (опционально, дефолты 7 и 17 OK)
-# SCHEDULE_MORNING_HOUR=7
-# SCHEDULE_AFTERNOON_HOUR=17
+# Домен (для CORS и Caddy)
+DOMAIN=<домен>
+```
 
-# Logging / observability (опционально)
-# LANGFUSE_PUBLIC_KEY=...
-# LANGFUSE_SECRET_KEY=...
+`firebase-sa.json` монтируется как read-only bind в api и bot:
+```yaml
+volumes:
+  - ./firebase-sa.json:/run/secrets/firebase-sa.json:ro
 ```
 
 ---
 
-## 8. systemd units
+## 5. Firebase Console
 
-### `/etc/systemd/system/ttt-api.service`
+Authentication → Settings → **Authorized domains** — добавить:
+- `app.<домен>`
+- (опционально) `<домен>`
 
-```ini
-[Unit]
-Description=Track the Ticket API
-After=network.target
-
-[Service]
-Type=simple
-User=ttt
-Group=ttt
-WorkingDirectory=/home/ttt/app/services
-EnvironmentFile=/etc/track-the-ticket/env
-ExecStart=/home/ttt/app/.venv/bin/python run.py
-Restart=on-failure
-RestartSec=5s
-# ВАЖНО: только 1 воркер. Шедулер встроен в lifespan API через APScheduler —
-# несколько воркеров = несколько шедулеров = дублирующиеся уведомления.
-# Если потребуется масштабировать — см. 02_concurrent_price_checks.md §5.
-
-[Install]
-WantedBy=multi-user.target
-```
-
-### `/etc/systemd/system/ttt-bot.service`
-
-```ini
-[Unit]
-Description=Track the Ticket Telegram bot
-After=network.target ttt-api.service
-Wants=ttt-api.service
-
-[Service]
-Type=simple
-User=ttt
-Group=ttt
-WorkingDirectory=/home/ttt/app/services
-EnvironmentFile=/etc/track-the-ticket/env
-ExecStart=/home/ttt/app/.venv/bin/python -m bot
-Restart=on-failure
-RestartSec=5s
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now ttt-api ttt-bot
-sudo systemctl status ttt-api ttt-bot
-```
+Скопировать актуальные `VITE_FIREBASE_*` значения из Project Settings
+→ General → "Your apps" → SDK config. Они нужны для GitHub Actions
+секретов (см. §7) — будут переданы как build-args в образ фронта.
 
 ---
 
-## 9. Frontend build + nginx
-
-### Билд фронта
-
-`/home/ttt/app/frontend/.env.production`:
-
-```
-VITE_API_URL=https://api.<твой-домен>
-VITE_FIREBASE_API_KEY=...
-VITE_FIREBASE_AUTH_DOMAIN=track-the-ticket.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=track-the-ticket
-VITE_FIREBASE_APP_ID=...
-VITE_TELEGRAM_BOT_USERNAME=track_the_ticket_bot
-```
+## 6. Первый деплой вручную
 
 ```bash
-cd /home/ttt/app/frontend
-npm run build
-# Результат в dist/
+ssh deploy@204.168.165.83
+cd ~/track-the-ticket
+
+# Логинимся в ghcr.io (нужен Personal Access Token с read:packages)
+echo <GHCR_TOKEN> | docker login ghcr.io -u <github-username> --password-stdin
+
+# Тянем образы (предполагаем, что GitHub Actions уже их собрал и запушил —
+# либо делаем первый билд локально и пушим, либо триггерим workflow вручную)
+docker compose -f docker-compose.prod.yml pull
+
+# Стартуем
+docker compose -f docker-compose.prod.yml up -d
+
+# Логи
+docker compose -f docker-compose.prod.yml logs -f
 ```
 
-### nginx
-
-`/etc/nginx/sites-available/ttt`:
-
-```nginx
-# Frontend (статика)
-server {
-    listen 80;
-    server_name <твой-домен>;
-
-    root /home/ttt/app/frontend/dist;
-    index index.html;
-
-    # SPA fallback — все unknown пути отдают index.html
-    location / {
-        try_files $uri /index.html;
-    }
-
-    # Раздаём скриншоты через API mount (см. services/api/main.py:67)
-    # Если хочешь раздавать nginx-ом напрямую, проксируй /screenshots/ к API,
-    # а не на файл-систему, потому что путь к ним идёт через DATABASE_PATH-aware код.
-}
-
-# API
-server {
-    listen 80;
-    server_name api.<твой-домен>;
-
-    client_max_body_size 10M;
-
-    location / {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        # Долгие проверки цен могут занимать > минуты
-        proxy_read_timeout 600s;
-    }
-}
-```
-
-```bash
-sudo ln -s /etc/nginx/sites-available/ttt /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
-```
-
-### HTTPS через Let's Encrypt
-
-```bash
-sudo certbot --nginx -d <домен> -d api.<домен>
-# certbot сам пропишет редиректы и обновит конфиг nginx
-```
+### Smoke-test
+- `https://app.<домен>` → открывается фронт, Google login работает
+- `https://api.<домен>/health` → `{"status":"ok"}`
+- Создать подписку → нажать Sync → результат приходит в Telegram
+- `docker compose logs api` → ловим строку `[scheduler] configured: daily at 07:00 and 17:00`
 
 ---
 
-## 10. Firebase Console — дополнительные настройки для прода
+## 7. GitHub Actions CI/CD
 
-- Authentication → Settings → **Authorized domains**: добавить
-  `<твой-домен>` (и при необходимости `api.<твой-домен>`).
-- Скопировать актуальные `VITE_FIREBASE_*` значения из Project Settings
-  → General → "Your apps" → SDK config в `.env.production` фронта.
+### 7.1. Что делает workflow
+
+На push в `main`:
+1. Build образа api → push в `ghcr.io/<owner>/track-the-ticket-api:latest` + `:<sha>`
+2. Build образа frontend (с `VITE_*` build-args из GitHub Secrets) → push в `ghcr.io/.../frontend`
+3. SSH на VPS, `cd ~/track-the-ticket`, `docker compose pull && docker compose up -d`
+4. Проверка health, при ошибке — exit code != 0, workflow красный
+
+### 7.2. GitHub Secrets, которые нужны
+
+В **Settings → Secrets and variables → Actions**:
+
+- `VPS_HOST` = `204.168.165.83`
+- `VPS_USER` = `deploy`
+- `VPS_SSH_KEY` = приватный SSH-ключ (тот, чей публичный лежит в
+  `/home/deploy/.ssh/authorized_keys`). Сгенерировать отдельную пару
+  специально для CI:
+  ```bash
+  ssh-keygen -t ed25519 -f ttt-deploy -N ""
+  ```
+  Публичный — на VPS, приватный — в GitHub Secret.
+- `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`,
+  `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID`,
+  `VITE_TELEGRAM_BOT_USERNAME`, `VITE_API_URL` (=`https://api.<домен>`)
+  — build-args для фронта.
+
+`GITHUB_TOKEN` (для пуша в ghcr.io) предоставляется автоматически.
+
+### 7.3. Файл workflow
+
+`.github/workflows/deploy.yml` — создаём на соответствующем шаге.
+Использует `docker/build-push-action` и `appleboy/ssh-action`.
 
 ---
 
-## 11. Запуск и smoke-test
+## 8. Бэкапы
+
+Volume `app_data` живёт в `/var/lib/docker/volumes/track-the-ticket_app_data/_data/`.
+
+Простой cron под `deploy`:
 
 ```bash
-sudo systemctl restart ttt-api ttt-bot
-sudo systemctl status ttt-api ttt-bot
-curl https://api.<домен>/health        # ожидаем {"status":"ok"}
-journalctl -u ttt-api -f                # смотрим, что шедулер пишет:
-# Ожидаем строку вида:
-# [scheduler] configured: daily at 07:00 and 17:00 Asia/Jerusalem
+crontab -e
+# Ежедневно в 03:30 — snapshot SQLite + retention 7 дней
+30 3 * * *  docker run --rm -v track-the-ticket_app_data:/data -v /home/deploy/backups:/backup alpine sh -c "cp /data/tracktheticket.db /backup/db-$(date +\%Y\%m\%d).db && find /backup -name 'db-*.db' -mtime +7 -delete"
 ```
 
-End-to-end:
-1. Открыть `https://<домен>` → залогиниться Google.
-2. Создать подписку из aviasales-ссылки.
-3. Нажать "Sync" — должен прийти результат в Telegram (если бот привязан).
-4. Дождаться 07:00 / 17:00 — должна сработать автоматическая проверка.
+Когда появятся реальные юзеры — Hetzner Storage Box / S3 + rclone.
 
 ---
 
-## 12. Бэкапы (минимум)
+## 9. Hardening и observability
 
-```bash
-# Простой cron: ежедневный snapshot БД + screenshots
-sudo crontab -e -u ttt
-# 30 3 * * *  cp /var/lib/track-the-ticket/data/tracktheticket.db /var/lib/track-the-ticket/data/backup-$(date +\%Y\%m\%d).db && find /var/lib/track-the-ticket/data/ -name 'backup-*.db' -mtime +7 -delete
-```
-
-При появлении реальных юзеров — настроить Hetzner Storage Box или
-rclone на S3-compatible хранилище.
-
----
-
-## 13. Обновление (deploy нового кода)
-
-```bash
-ssh ttt@<vps>
-cd ~/app
-git pull
-source .venv/bin/activate
-pip install -r services/requirements.txt   # на случай новых зависимостей
-cd frontend && npm ci && npm run build
-sudo systemctl restart ttt-api ttt-bot
-# Смотрим логи 30 секунд, ловим явные ошибки
-journalctl -u ttt-api -u ttt-bot -n 50
-```
-
-Миграции БД сейчас ручные (Alembic не настроен — см.
-[deployment_checklist.md](deployment_checklist.md) §7).
+- [ ] `fail2ban` уже стоит после §1 — проверить `systemctl status fail2ban`
+- [ ] Sentry или алерт в Telegram на ERROR из логов
+- [ ] `docker logs` с rotation: в `/etc/docker/daemon.json`:
+  ```json
+  { "log-driver": "json-file", "log-opts": { "max-size": "10m", "max-file": "3" } }
+  ```
+  потом `systemctl restart docker`
+- [ ] Снять `deploy` из группы `sudo` после полной настройки
+  (если нужны редкие админ-задачи — `su` под root по ssh-ключу)
+- [ ] Alembic для миграций БД — когда появятся реальные данные
+- [ ] Мониторинг диска: Playwright Chromium + screenshots могут расти
 
 ---
 
-## 14. Что ещё стоит сделать после первого деплоя
+## Что НЕ входит в этот план
 
-- [ ] Sentry (или хотя бы алертинг в Telegram на стектрейс из логов).
-- [ ] Поставить `fail2ban` для SSH.
-- [ ] Отключить SSH password auth, оставить только ключи (`PasswordAuthentication no`).
-- [ ] Убрать `ttt` из группы `sudo` после первоначального setup'а.
-- [ ] Alembic — когда появятся реальные данные.
-- [ ] Логи API в файл + ротация (`logrotate`), а не только journald.
+- Postgres — пока остаёмся на SQLite, переход — отдельная задача
+- Параллельные проверки цен — план [02_concurrent_price_checks.md](02_concurrent_price_checks.md)
+- Staging-окружение — у нас одна среда, прод. Если понадобится stg —
+  второй compose-файл с другим доменом и другими volume-name'ами.
