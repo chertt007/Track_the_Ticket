@@ -16,7 +16,7 @@ services:
 
   # ── Backend API (FastAPI + Playwright + SQLite) ───────────────────────────
   api:
-    image: ghcr.io/${GITHUB_REPOSITORY}/api:latest
+    image: ${IMAGE_PREFIX}/api:latest
     env_file: .env
     volumes:
       - app_data:/data
@@ -27,7 +27,7 @@ services:
 
   # ── Telegram bot ──────────────────────────────────────────────────────────
   bot:
-    image: ghcr.io/${GITHUB_REPOSITORY}/api:latest
+    image: ${IMAGE_PREFIX}/api:latest
     command: python -m bot
     env_file: .env
     volumes:
@@ -41,7 +41,7 @@ services:
 
   # ── Frontend (nginx + static build) ──────────────────────────────────────
   frontend:
-    image: ghcr.io/${GITHUB_REPOSITORY}/frontend:latest
+    image: ${IMAGE_PREFIX}/frontend:latest
     networks:
       - tttnet
     restart: unless-stopped
