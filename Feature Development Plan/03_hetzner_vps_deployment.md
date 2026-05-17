@@ -63,9 +63,10 @@
 4. ✅ [GitHub Actions CI/CD — secrets](#4-github-actions-cicd)
 5. ✅ [Секреты и `.env` на VPS](#5-секреты-и-env-на-vps)
 6. ✅ [Firebase Console — Authorized domains](#6-firebase-console)
-7. ⬜ [Первый деплой вручную](#7-первый-деплой-вручную)
+7. ✅ [Первый деплой вручную](#7-первый-деплой-вручную)
 8. ⬜ [Бэкапы](#8-бэкапы)
 9. ⬜ [Hardening и observability](#9-hardening-и-observability)
+10. ⬜ Красивый URL — `track-the-ticket.com` без `app.` (DNS @-запись + Caddyfile + Firebase)
 
 ---
 

@@ -1,7 +1,7 @@
 """
 Automated price-check jobs.
 
-Twice a day (default 07:00 and 17:00 Moscow time, override via env vars
+Twice a day (default 07:00 and 17:00 Asia/Jerusalem, override via env vars
 SCHEDULE_MORNING_HOUR / SCHEDULE_AFTERNOON_HOUR) we iterate over every
 active subscription and run the same `check_price` pipeline the user
 triggers manually from the UI. The Telegram notifier is already wired
