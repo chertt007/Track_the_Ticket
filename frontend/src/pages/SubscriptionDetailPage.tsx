@@ -28,18 +28,28 @@ import { fetchPriceHistory } from '../store/slices/priceHistorySlice'
 import { detailStyles as s } from './SubscriptionDetailPage.styles'
 import { skyPalette } from '../theme'
 
+function formatVia(via: string): string {
+  if (via === 'llm') return 'LLM'
+  if (via.startsWith('replay')) return 'Strategy replay'
+  return via
+}
+
 // Custom recharts tooltip with sky styling
-function PriceTooltip({ active, payload, label }: {
+function PriceTooltip({ active, payload }: {
   active?: boolean
-  payload?: Array<{ value: number }>
-  label?: string
+  payload?: Array<{ value: number; payload: { date: string; time: string; via: string } }>
 }) {
   if (!active || !payload?.length) return null
+  const { date, time, via } = payload[0].payload
   return (
     <Box sx={s.chartTooltip}>
-      <Typography variant="caption" color="text.secondary">{label}</Typography>
-      <Typography variant="body2" fontWeight={700} color="primary.dark">
+      <Typography variant="caption" color="text.secondary">{date}</Typography>
+      <Typography variant="caption" color="text.secondary" display="block">{time}</Typography>
+      <Typography variant="body2" fontWeight={700} color="primary.dark" sx={{ mt: 0.25 }}>
         {payload[0].value.toLocaleString('ru-RU')} ₽
+      </Typography>
+      <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.65rem' }}>
+        {formatVia(via)}
       </Typography>
     </Box>
   )
@@ -81,10 +91,15 @@ export default function SubscriptionDetailPage() {
   const currentPrice = sub.lastPrice
 
   // Prepare chart data
-  const chartData = history.map(h => ({
-    date: new Date(h.checkedAt).toLocaleDateString(locale, { month: 'short', day: 'numeric' }),
-    price: h.status === 'ok' ? h.price : null,
-  }))
+  const chartData = history.map(h => {
+    const dt = new Date(h.checkedAt)
+    return {
+      date:  dt.toLocaleDateString(locale, { month: 'short', day: 'numeric' }),
+      time:  dt.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }),
+      via:   h.via,
+      price: h.status === 'ok' ? h.price : null,
+    }
+  })
 
   // Formatted departure date
   const formattedDeparture = sub.departureDate !== '—'
@@ -210,12 +225,21 @@ export default function SubscriptionDetailPage() {
           </Box>
         ) : (
           <Box sx={s.chartWrapper}>
-            <ResponsiveContainer width="100%" height={240}>
-              <LineChart data={chartData} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={chartData} margin={{ top: 8, right: 16, left: 8, bottom: 4 }}>
                 <CartesianGrid strokeDasharray="4 4" stroke="rgba(1,87,155,0.1)" vertical={false} />
                 <XAxis
                   dataKey="date"
-                  tick={{ fontSize: 11, fill: '#3E6B8C' }}
+                  tick={({ x, y, payload, index }) => {
+                    const entry = chartData[index]
+                    return (
+                      <g transform={`translate(${x},${y})`}>
+                        <text x={0} y={0} dy={12} textAnchor="middle" fontSize={10} fill="#3E6B8C">{payload.value}</text>
+                        <text x={0} y={0} dy={23} textAnchor="middle" fontSize={9} fill="#7EAAC8">{entry?.time}</text>
+                      </g>
+                    )
+                  }}
+                  height={36}
                   axisLine={false}
                   tickLine={false}
                 />

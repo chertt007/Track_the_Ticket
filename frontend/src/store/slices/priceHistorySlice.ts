@@ -11,6 +11,7 @@ function mapItem(raw: PriceHistoryApiItem): PriceHistory {
     s3Key:          null,
     checkedAt:      raw.checked_at,
     status:         raw.status,
+    via:            raw.via,
   }
 }
 

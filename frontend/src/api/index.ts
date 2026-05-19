@@ -101,6 +101,7 @@ export interface PriceHistoryApiItem {
   amount: number | null
   currency: string | null
   status: 'ok' | 'failed'
+  via: string
 }
 
 export const getPriceHistory = async (subId: string): Promise<PriceHistoryApiItem[]> => {

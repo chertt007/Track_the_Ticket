@@ -331,6 +331,7 @@ def get_price_history(
             "amount":          float(c.amount) if c.amount is not None else None,
             "currency":        c.currency,
             "status":          "ok" if c.amount is not None else "failed",
+            "via":             c.via,
         }
         for c in checks
     ]
