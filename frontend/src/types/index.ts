@@ -24,7 +24,7 @@ export interface PriceHistory {
   s3Key: string | null
   checkedAt: string
   status: 'ok' | 'failed' | 'suspicious'
-  via: string
+  via?: string
 }
 
 export interface User {

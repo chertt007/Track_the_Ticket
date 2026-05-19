@@ -28,7 +28,8 @@ import { fetchPriceHistory } from '../store/slices/priceHistorySlice'
 import { detailStyles as s } from './SubscriptionDetailPage.styles'
 import { skyPalette } from '../theme'
 
-function formatVia(via: string): string {
+function formatVia(via?: string): string {
+  if (!via) return ''
   if (via === 'llm') return 'LLM'
   if (via.startsWith('replay')) return 'Strategy replay'
   return via
