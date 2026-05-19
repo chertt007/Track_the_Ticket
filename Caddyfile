@@ -1,5 +1,9 @@
-app.track-the-ticket.com {
+track-the-ticket.com {
     reverse_proxy frontend:80
+}
+
+app.track-the-ticket.com {
+    redir https://track-the-ticket.com{uri} permanent
 }
 
 api.track-the-ticket.com {
