@@ -3,6 +3,7 @@ import subscriptionsReducer from './slices/subscriptionsSlice'
 import settingsReducer from './slices/settingsSlice'
 import authReducer from './slices/authSlice'
 import telegramReducer from './slices/telegramSlice'
+import priceHistoryReducer from './slices/priceHistorySlice'
 
 export const store = configureStore({
   reducer: {
@@ -10,6 +11,7 @@ export const store = configureStore({
     subscriptions: subscriptionsReducer,
     settings: settingsReducer,
     telegram: telegramReducer,
+    priceHistory: priceHistoryReducer,
   },
 })
 

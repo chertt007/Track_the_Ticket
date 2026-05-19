@@ -7,6 +7,7 @@ Endpoints:
   POST /subscriptions          — save a subscription to the DB
   GET  /subscriptions          — list subscriptions for a user
   DELETE /subscriptions/{id}   — delete a subscription
+  GET  /subscriptions/{id}/price-history — price check history for a subscription
   POST /telegram/link-token    — issue a deep-link token (auth)
   GET  /telegram/status        — return Telegram link status (auth)
   DELETE /telegram/unlink      — drop the Telegram binding (auth)
@@ -304,6 +305,35 @@ def telegram_claim(
 
     ok, reason = claim_link_token(db, payload.token, payload.chat_id)
     return {"ok": ok, "message": reason}
+
+
+@app.get("/subscriptions/{sub_id}/price-history")
+def get_price_history(
+    sub_id: str,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    sub = db.get(Subscription, sub_id)
+    if sub is None or sub.user_id != user.id:
+        raise HTTPException(status_code=404, detail=f"Subscription {sub_id} not found")
+
+    checks = (
+        db.query(PriceCheck)
+        .filter(PriceCheck.subscription_id == sub_id)
+        .order_by(PriceCheck.checked_at.asc())
+        .all()
+    )
+    return [
+        {
+            "id":              str(c.id),
+            "subscription_id": c.subscription_id,
+            "checked_at":      c.checked_at.isoformat(),
+            "amount":          float(c.amount) if c.amount is not None else None,
+            "currency":        c.currency,
+            "status":          "ok" if c.amount is not None else "failed",
+        }
+        for c in checks
+    ]
 
 
 @app.post("/subscriptions/{sub_id}/check")

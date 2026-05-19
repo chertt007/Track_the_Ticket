@@ -20,10 +20,11 @@ import {
   Tooltip as ChartTooltip,
   ReferenceLine,
 } from 'recharts'
-import { useAppSelector } from '../hooks'
+import { useEffect } from 'react'
+import { useAppSelector, useAppDispatch } from '../hooks'
 import { useT } from '../hooks/useT'
 import { useLocale } from '../hooks/useLocale'
-import { mockPriceHistory } from '../mocks/priceHistory'
+import { fetchPriceHistory } from '../store/slices/priceHistorySlice'
 import { detailStyles as s } from './SubscriptionDetailPage.styles'
 import { skyPalette } from '../theme'
 
@@ -49,9 +50,15 @@ export default function SubscriptionDetailPage() {
   const navigate = useNavigate()
   const t = useT()
   const locale = useLocale()
+  const dispatch = useAppDispatch()
 
   const sub = useAppSelector(st => st.subscriptions.items.find(s => s.id === id))
-  const history = id ? (mockPriceHistory[id] ?? []) : []
+  const history = useAppSelector(st => (id ? (st.priceHistory.bySubId[id] ?? []) : []))
+  const historyLoading = useAppSelector(st => st.priceHistory.loadingId === id)
+
+  useEffect(() => {
+    if (id) dispatch(fetchPriceHistory(id))
+  }, [id, dispatch])
 
   // Subscription not found
   if (!sub) {
@@ -193,7 +200,11 @@ export default function SubscriptionDetailPage() {
       <Card elevation={0} sx={s.chartCard}>
         <Typography variant="h6" sx={s.sectionLabel}>{t('priceHistory')}</Typography>
 
-        {history.length === 0 ? (
+        {historyLoading ? (
+          <Box sx={s.emptyChart}>
+            <Typography variant="body2" color="text.secondary">{t('loading')}</Typography>
+          </Box>
+        ) : history.length === 0 ? (
           <Box sx={s.emptyChart}>
             <Typography variant="body2">{t('noPriceData')}</Typography>
           </Box>

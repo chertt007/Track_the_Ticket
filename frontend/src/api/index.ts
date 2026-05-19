@@ -91,3 +91,19 @@ export const getTelegramStatus = async (): Promise<TelegramStatus> => {
 export const unlinkTelegram = async (): Promise<void> => {
   await apiClient.delete('/telegram/unlink')
 }
+
+// ── Price history ─────────────────────────────────────────────────────────────
+
+export interface PriceHistoryApiItem {
+  id: string
+  subscription_id: string
+  checked_at: string
+  amount: number | null
+  currency: string | null
+  status: 'ok' | 'failed'
+}
+
+export const getPriceHistory = async (subId: string): Promise<PriceHistoryApiItem[]> => {
+  const { data } = await apiClient.get<PriceHistoryApiItem[]>(`/subscriptions/${subId}/price-history`)
+  return data
+}
