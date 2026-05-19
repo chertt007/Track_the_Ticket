@@ -5,7 +5,6 @@ import {
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
   signInWithPopup,
-  signInWithRedirect,
 } from 'firebase/auth'
 import { FirebaseError } from 'firebase/app'
 import Box from '@mui/material/Box'
@@ -25,10 +24,6 @@ import { loginStyles as s } from './LoginPage.styles'
 
 type AuthView = 'login' | 'signup' | 'forgotPassword'
 
-// Use redirect on touch devices — popup UX is broken in mobile browsers.
-const isMobile = () =>
-  typeof window !== 'undefined' &&
-  window.matchMedia('(max-width: 768px)').matches
 
 export default function LoginPage() {
   const t = useT()
@@ -69,13 +64,7 @@ export default function LoginPage() {
     clearMessages()
     setLoading(true)
     try {
-      if (isMobile()) {
-        await signInWithRedirect(auth, googleProvider)
-        // Page navigates away — loading stays true until redirect completes
-      } else {
-        await signInWithPopup(auth, googleProvider)
-        // onAuthStateChanged fires → AuthGuard lets us through
-      }
+      await signInWithPopup(auth, googleProvider)
     } catch (err) {
       console.error('[google-signin]', err)
       setError(friendlyError(err))

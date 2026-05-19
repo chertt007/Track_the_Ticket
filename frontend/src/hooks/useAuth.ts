@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { onAuthStateChanged } from 'firebase/auth'
+import { onAuthStateChanged, getRedirectResult } from 'firebase/auth'
 import { auth } from '../config/firebase'
 import { useAppDispatch } from '.'
 import { clearAuth, setUser } from '../store/slices/authSlice'
@@ -15,6 +15,8 @@ export function useAuth() {
   const dispatch = useAppDispatch()
 
   useEffect(() => {
+    // Clear any pending redirect state left over from signInWithRedirect calls.
+    getRedirectResult(auth).catch(() => {})
     return onAuthStateChanged(auth, (user) => {
       if (user) {
         dispatch(setUser({
