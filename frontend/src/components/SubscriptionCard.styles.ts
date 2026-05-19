@@ -1,6 +1,6 @@
 import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material'
-import { berryPalette } from '../theme'
+import { skyPalette } from '../theme'
 
 export const cardStyles = {
   card: (isActive: boolean): SxProps<Theme> => ({
@@ -9,13 +9,13 @@ export const cardStyles = {
     alignItems: { xs: 'stretch', md: 'center' },
     gap: { xs: 2, md: 0 },
     p: { xs: 2, sm: 3 },
-    borderLeft: `4px solid ${isActive ? berryPalette.raspberry : alpha(berryPalette.rose, 0.4)}`,
+    borderLeft: `4px solid ${isActive ? skyPalette.sky : alpha(skyPalette.brightSky, 0.4)}`,
     opacity: isActive ? 1 : 0.7,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     '&:hover': {
       transform: 'translateY(-2px)',
-      boxShadow: `0 8px 32px ${alpha(berryPalette.berry, 0.15)}`,
+      boxShadow: `0 8px 32px ${alpha(skyPalette.deepSky, 0.15)}`,
     },
   }),
 
@@ -62,14 +62,14 @@ export const cardStyles = {
 
   priceText: {
     fontWeight: 700,
-    color: berryPalette.berry,
+    color: skyPalette.deepSky,
     fontSize: { xs: '1rem', sm: '1.1rem' },
     lineHeight: 1.2,
     whiteSpace: 'nowrap',
   } as SxProps<Theme>,
 
   pricePlaceholder: {
-    color: alpha(berryPalette.berry, 0.45),
+    color: alpha(skyPalette.deepSky, 0.45),
     fontStyle: 'italic',
     fontSize: '0.85rem',
   } as SxProps<Theme>,
@@ -78,12 +78,12 @@ export const cardStyles = {
     p: 0,
     borderRadius: 2,
     overflow: 'hidden',
-    border: `1px solid ${alpha(berryPalette.rose, 0.5)}`,
-    boxShadow: `0 4px 14px ${alpha(berryPalette.berry, 0.15)}`,
+    border: `1px solid ${alpha(skyPalette.brightSky, 0.5)}`,
+    boxShadow: `0 4px 14px ${alpha(skyPalette.deepSky, 0.15)}`,
     transition: 'transform 0.18s ease, box-shadow 0.18s ease',
     '&:hover': {
       transform: 'scale(1.03)',
-      boxShadow: `0 8px 22px ${alpha(berryPalette.berry, 0.25)}`,
+      boxShadow: `0 8px 22px ${alpha(skyPalette.deepSky, 0.25)}`,
     },
   } as SxProps<Theme>,
 
@@ -105,7 +105,7 @@ export const cardStyles = {
   } as SxProps<Theme>,
 
   lightboxBackdrop: {
-    background: alpha(berryPalette.berry, 0.7),
+    background: alpha(skyPalette.twilight, 0.75),
     backdropFilter: 'blur(8px)',
   } as SxProps<Theme>,
 
@@ -124,7 +124,7 @@ export const cardStyles = {
     width: 'auto',
     height: 'auto',
     borderRadius: 12,
-    boxShadow: `0 20px 60px ${alpha(berryPalette.berry, 0.45)}`,
+    boxShadow: `0 20px 60px ${alpha(skyPalette.twilight, 0.5)}`,
     cursor: 'zoom-out',
   } as SxProps<Theme>,
 
@@ -141,22 +141,22 @@ export const cardStyles = {
   } as SxProps<Theme>,
 
   checkButton: {
-    color: berryPalette.raspberry,
-    background: alpha(berryPalette.rose, 0.15),
-    border: `1px solid ${alpha(berryPalette.raspberry, 0.25)}`,
+    color: skyPalette.sky,
+    background: alpha(skyPalette.brightSky, 0.15),
+    border: `1px solid ${alpha(skyPalette.sky, 0.25)}`,
     transition: 'all 0.2s ease',
     '&:hover': {
-      background: alpha(berryPalette.raspberry, 0.12),
+      background: alpha(skyPalette.sky, 0.12),
       transform: 'rotate(180deg)',
     },
   } as SxProps<Theme>,
 
   deleteButton: {
-    color: alpha(berryPalette.raspberry, 0.45),
+    color: alpha(skyPalette.sky, 0.45),
     transition: 'all 0.2s ease',
     '&:hover': {
-      color: berryPalette.raspberry,
-      background: alpha(berryPalette.raspberry, 0.08),
+      color: skyPalette.sky,
+      background: alpha(skyPalette.sky, 0.08),
     },
   } as SxProps<Theme>,
 
@@ -174,16 +174,16 @@ export const cardStyles = {
   } as SxProps<Theme>,
 
   spinner: {
-    color: berryPalette.raspberry,
+    color: skyPalette.sky,
   } as SxProps<Theme>,
 
   takeoffIcon: {
-    color: berryPalette.raspberry,
+    color: skyPalette.sky,
     fontSize: 20,
   } as SxProps<Theme>,
 
   landIcon: {
-    color: berryPalette.berry,
+    color: skyPalette.deepSky,
     fontSize: 20,
   } as SxProps<Theme>,
 
@@ -192,8 +192,8 @@ export const cardStyles = {
     borderRadius: 4,
     background: 'rgba(255,255,255,0.92)',
     backdropFilter: 'blur(24px)',
-    border: `1px solid ${alpha(berryPalette.rose, 0.3)}`,
-    boxShadow: `0 20px 60px ${alpha(berryPalette.berry, 0.2)}`,
+    border: `1px solid ${alpha(skyPalette.brightSky, 0.3)}`,
+    boxShadow: `0 20px 60px ${alpha(skyPalette.deepSky, 0.2)}`,
   } as SxProps<Theme>,
 
   dialogTitleRow: {
@@ -207,7 +207,7 @@ export const cardStyles = {
     width: 36,
     height: 36,
     borderRadius: '50%',
-    background: `linear-gradient(135deg, ${alpha(berryPalette.raspberry, 0.9)}, ${berryPalette.berry})`,
+    background: `linear-gradient(135deg, ${alpha(skyPalette.sky, 0.9)}, ${skyPalette.deepSky})`,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -222,7 +222,7 @@ export const cardStyles = {
   } as SxProps<Theme>,
 
   dialogCancelButton: {
-    color: berryPalette.berry,
+    color: skyPalette.deepSky,
     borderRadius: 2,
     textTransform: 'none',
     fontWeight: 600,
@@ -232,11 +232,11 @@ export const cardStyles = {
     borderRadius: 2,
     textTransform: 'none',
     fontWeight: 600,
-    background: `linear-gradient(135deg, ${alpha(berryPalette.raspberry, 0.95)}, ${berryPalette.berry})`,
-    boxShadow: `0 6px 20px ${alpha(berryPalette.berry, 0.35)}`,
+    background: `linear-gradient(135deg, ${alpha(skyPalette.sky, 0.95)}, ${skyPalette.deepSky})`,
+    boxShadow: `0 6px 20px ${alpha(skyPalette.deepSky, 0.35)}`,
     '&:hover': {
-      background: `linear-gradient(135deg, ${berryPalette.raspberry}, ${berryPalette.berry})`,
-      boxShadow: `0 8px 24px ${alpha(berryPalette.berry, 0.45)}`,
+      background: `linear-gradient(135deg, ${skyPalette.sky}, ${skyPalette.deepSky})`,
+      boxShadow: `0 8px 24px ${alpha(skyPalette.deepSky, 0.45)}`,
     },
   } as SxProps<Theme>,
 }

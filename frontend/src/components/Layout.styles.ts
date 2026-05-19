@@ -1,6 +1,6 @@
 import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material'
-import { berryPalette } from '../theme'
+import { skyPalette } from '../theme'
 
 export const layoutStyles = {
   root: {
@@ -46,7 +46,7 @@ export const layoutStyles = {
     fontSize: '0.8rem',
     fontWeight: 700,
     ml: 1,
-    background: alpha(berryPalette.rose, 0.35),
+    background: alpha(skyPalette.brightSky, 0.35),
     color: '#fff',
     border: '1px solid rgba(255,255,255,0.3)',
   } as SxProps<Theme>,
@@ -74,4 +74,46 @@ export const layoutStyles = {
     py: { xs: 3, sm: 4, md: 5 },
     px: { xs: 2, sm: 3 },
   } as SxProps<Theme>,
+
+  // ── Animated cloud layer inside AppBar ──────────────────────────────────────
+  cloudLayer: {
+    position: 'absolute',
+    inset: 0,
+    overflow: 'hidden',
+    pointerEvents: 'none',
+    zIndex: 0,
+  } as SxProps<Theme>,
+
+  // Cloud shape: pill base + two bumps via ::before / ::after.
+  // Params: width(px), height(px), top(%), drift duration(s), animation delay(s)
+  cloud: (width: number, height: number, top: string, duration: number, delay: number): SxProps<Theme> => ({
+    position: 'absolute',
+    top,
+    left: 0,
+    width:  `${width}px`,
+    height: `${height}px`,
+    background: 'rgba(255,255,255,0.38)',
+    borderRadius: `${height}px`,
+    animation: `cloudDrift ${duration}s linear ${delay}s infinite`,
+    '&::before': {
+      content: '""',
+      background: 'rgba(255,255,255,0.38)',
+      position: 'absolute',
+      borderRadius: '50%',
+      top: '-55%',
+      left: '12%',
+      width: '48%',
+      height: '145%',
+    },
+    '&::after': {
+      content: '""',
+      background: 'rgba(255,255,255,0.38)',
+      position: 'absolute',
+      borderRadius: '50%',
+      top: '-38%',
+      right: '14%',
+      width: '38%',
+      height: '125%',
+    },
+  }),
 }

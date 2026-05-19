@@ -1,10 +1,10 @@
 import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material'
-import { berryPalette } from '../theme'
+import { skyPalette } from '../theme'
 
 export const dashboardStyles = {
   pageBox: {
-    // page-enter анимация применяется через className
+    // page-enter animation applied via className
   } as SxProps<Theme>,
 
   headerRow: {
@@ -28,13 +28,13 @@ export const dashboardStyles = {
     textAlign: 'center',
     py: 10,
     borderRadius: 4,
-    border: `2px dashed ${alpha(berryPalette.rose, 0.4)}`,
-    background: alpha(berryPalette.blush, 0.3),
+    border: `2px dashed ${alpha(skyPalette.brightSky, 0.45)}`,
+    background: alpha(skyPalette.cloudWhite, 0.5),
   } as SxProps<Theme>,
 
   emptyIcon: {
     fontSize: 56,
-    color: alpha(berryPalette.raspberry, 0.3),
+    color: alpha(skyPalette.sky, 0.3),
     mb: 2,
   } as SxProps<Theme>,
 

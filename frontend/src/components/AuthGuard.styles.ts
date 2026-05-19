@@ -1,5 +1,5 @@
 import type { SxProps, Theme } from '@mui/material'
-import { berryPalette } from '../theme'
+import { skyPalette } from '../theme'
 
 export const authGuardStyles = {
   spinnerBox: {
@@ -10,6 +10,6 @@ export const authGuardStyles = {
   } as SxProps<Theme>,
 
   spinner: {
-    color: berryPalette.raspberry,
+    color: skyPalette.sky,
   } as SxProps<Theme>,
 }

@@ -1,6 +1,6 @@
 import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material'
-import { berryPalette } from '../theme'
+import { skyPalette } from '../theme'
 
 export const loginStyles = {
   pageBox: {
@@ -17,24 +17,24 @@ export const loginStyles = {
     width: '100%',
     textAlign: 'center',
     borderRadius: 4,
-    background: 'rgba(255,255,255,0.65)',
+    background: 'rgba(255,255,255,0.72)',
     backdropFilter: 'blur(24px)',
     WebkitBackdropFilter: 'blur(24px)',
-    border: `1px solid ${alpha(berryPalette.rose, 0.35)}`,
-    boxShadow: `0 20px 60px ${alpha(berryPalette.berry, 0.18)}`,
+    border: `1px solid ${alpha(skyPalette.brightSky, 0.35)}`,
+    boxShadow: `0 20px 60px ${alpha(skyPalette.deepSky, 0.18)}`,
   } as SxProps<Theme>,
 
   iconCircle: {
     width: 64,
     height: 64,
     borderRadius: '50%',
-    background: `linear-gradient(135deg, ${berryPalette.rose}, ${berryPalette.berry})`,
+    background: `linear-gradient(135deg, ${skyPalette.brightSky}, ${skyPalette.deepSky})`,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     mx: 'auto',
     mb: 2,
-    boxShadow: `0 8px 24px ${alpha(berryPalette.raspberry, 0.4)}`,
+    boxShadow: `0 8px 24px ${alpha(skyPalette.sky, 0.4)}`,
   } as SxProps<Theme>,
 
   icon: {
@@ -67,7 +67,6 @@ export const loginStyles = {
     '&:hover': { color: 'text.secondary' },
   } as SxProps<Theme>,
 
-  // Email/password form
   orDivider: {
     my: 2,
     opacity: 0.45,

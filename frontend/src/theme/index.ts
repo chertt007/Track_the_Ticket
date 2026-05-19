@@ -1,14 +1,14 @@
 import { createTheme, alpha } from '@mui/material/styles'
 
-// ─── Ягодная палитра ──────────────────────────────────────────────────────────
-export const berryPalette = {
-  blush: '#FFD6E0',       // нежно-розовый (самый светлый)
-  rose: '#FF85A1',        // розовый
-  raspberry: '#D63384',   // малиновый / primary
-  berry: '#9B1B5A',       // ягодный / primary dark
-  burgundy: '#5C0A34',    // бордовый (самый тёмный)
-  glassWhite: 'rgba(255, 255, 255, 0.15)',
-  glassBorder: 'rgba(255, 255, 255, 0.25)',
+// ─── Sky palette ──────────────────────────────────────────────────────────────
+export const skyPalette = {
+  cloudWhite: '#E1F5FE',     // horizon / lightest sky
+  brightSky:  '#4FC3F7',     // bright sky blue
+  sky:        '#0288D1',     // primary main
+  deepSky:    '#01579B',     // primary dark
+  twilight:   '#002D62',     // deep navy / darkest
+  glassWhite: 'rgba(255, 255, 255, 0.18)',
+  glassBorder:'rgba(255, 255, 255, 0.32)',
 }
 
 const theme = createTheme({
@@ -17,34 +17,34 @@ const theme = createTheme({
     values: { xs: 0, sm: 600, md: 900, lg: 1200, xl: 1536 },
   },
 
-  // ─── Палитра ───────────────────────────────────────────────────────────────
+  // ─── Palette ───────────────────────────────────────────────────────────────
   palette: {
     mode: 'light',
     primary: {
-      light: berryPalette.rose,
-      main: berryPalette.raspberry,
-      dark: berryPalette.berry,
+      light: skyPalette.brightSky,
+      main:  skyPalette.sky,
+      dark:  skyPalette.deepSky,
       contrastText: '#fff',
     },
     secondary: {
-      light: berryPalette.blush,
-      main: berryPalette.rose,
-      dark: berryPalette.raspberry,
-      contrastText: '#5C0A34',
+      light: skyPalette.cloudWhite,
+      main:  skyPalette.brightSky,
+      dark:  skyPalette.sky,
+      contrastText: skyPalette.twilight,
     },
     background: {
       default: 'transparent',
-      paper: 'rgba(255, 255, 255, 0.55)',
+      paper:   'rgba(255, 255, 255, 0.65)',
     },
     text: {
-      primary: '#3A0020',
-      secondary: '#7A3050',
+      primary:   '#0D2B4E',
+      secondary: '#3E6B8C',
     },
-    error: { main: '#E53935' },
+    error:   { main: '#E53935' },
     success: { main: '#2E7D32' },
   },
 
-  // ─── Типографика — Poppins ─────────────────────────────────────────────────
+  // ─── Typography — Poppins ──────────────────────────────────────────────────
   typography: {
     fontFamily: '"Poppins", "Roboto", "Helvetica", "Arial", sans-serif',
     h1: { fontWeight: 700, letterSpacing: '-0.02em' },
@@ -58,67 +58,68 @@ const theme = createTheme({
     body2: { lineHeight: 1.6 },
   },
 
-  // ─── Форма элементов ───────────────────────────────────────────────────────
+  // ─── Shape ────────────────────────────────────────────────────────────────
   shape: { borderRadius: 16 },
 
-  // ─── Тени ─────────────────────────────────────────────────────────────────
+  // ─── Shadows ──────────────────────────────────────────────────────────────
   shadows: [
     'none',
-    `0 2px 8px ${alpha(berryPalette.berry, 0.08)}`,
-    `0 4px 16px ${alpha(berryPalette.berry, 0.12)}`,
-    `0 8px 24px ${alpha(berryPalette.berry, 0.15)}`,
-    `0 12px 32px ${alpha(berryPalette.berry, 0.18)}`,
-    `0 16px 40px ${alpha(berryPalette.berry, 0.2)}`,
-    ...Array(19).fill(`0 16px 40px ${alpha(berryPalette.berry, 0.2)}`),
+    `0 2px 8px ${alpha(skyPalette.deepSky, 0.08)}`,
+    `0 4px 16px ${alpha(skyPalette.deepSky, 0.12)}`,
+    `0 8px 24px ${alpha(skyPalette.deepSky, 0.15)}`,
+    `0 12px 32px ${alpha(skyPalette.deepSky, 0.18)}`,
+    `0 16px 40px ${alpha(skyPalette.deepSky, 0.2)}`,
+    ...Array(19).fill(`0 16px 40px ${alpha(skyPalette.deepSky, 0.2)}`),
   ] as any,
 
-  // ─── Компоненты ───────────────────────────────────────────────────────────
+  // ─── Component overrides ──────────────────────────────────────────────────
   components: {
-    // AppBar — glassmorphism
+    // AppBar — sky glassmorphism with overflow hidden for cloud layer
     MuiAppBar: {
       styleOverrides: {
         root: {
-          background: `linear-gradient(135deg, ${alpha(berryPalette.burgundy, 0.85)} 0%, ${alpha(berryPalette.berry, 0.85)} 100%)`,
+          background: `linear-gradient(135deg, ${alpha(skyPalette.twilight, 0.92)} 0%, ${alpha(skyPalette.deepSky, 0.88)} 50%, ${alpha(skyPalette.sky, 0.85)} 100%)`,
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
-          boxShadow: `0 4px 24px ${alpha(berryPalette.burgundy, 0.25)}`,
-          borderBottom: `1px solid ${berryPalette.glassBorder}`,
+          boxShadow: `0 4px 24px ${alpha(skyPalette.twilight, 0.3)}`,
+          borderBottom: `1px solid ${skyPalette.glassBorder}`,
+          overflow: 'hidden',
         },
       },
     },
 
-    // Card — стеклянный эффект
+    // Card — frosted-glass cloud card
     MuiCard: {
       styleOverrides: {
         root: {
-          background: 'rgba(255, 255, 255, 0.6)',
+          background: 'rgba(255, 255, 255, 0.68)',
           backdropFilter: 'blur(16px)',
           WebkitBackdropFilter: 'blur(16px)',
-          border: `1px solid ${berryPalette.glassBorder}`,
+          border: `1px solid ${alpha(skyPalette.brightSky, 0.25)}`,
           borderRadius: 20,
-          boxShadow: `0 8px 32px ${alpha(berryPalette.berry, 0.12)}`,
+          boxShadow: `0 8px 32px ${alpha(skyPalette.deepSky, 0.1)}`,
           transition: 'transform 0.2s ease, box-shadow 0.2s ease',
           '&:hover': {
             transform: 'translateY(-2px)',
-            boxShadow: `0 12px 40px ${alpha(berryPalette.berry, 0.2)}`,
+            boxShadow: `0 12px 40px ${alpha(skyPalette.deepSky, 0.18)}`,
           },
         },
       },
     },
 
-    // Paper — стеклянный эффект
+    // Paper — frosted glass
     MuiPaper: {
       styleOverrides: {
         root: {
-          background: 'rgba(255, 255, 255, 0.6)',
+          background: 'rgba(255, 255, 255, 0.68)',
           backdropFilter: 'blur(16px)',
           WebkitBackdropFilter: 'blur(16px)',
-          border: `1px solid ${berryPalette.glassBorder}`,
+          border: `1px solid ${alpha(skyPalette.brightSky, 0.2)}`,
         },
       },
     },
 
-    // Button — градиентные кнопки
+    // Button — sky gradient
     MuiButton: {
       styleOverrides: {
         root: {
@@ -127,20 +128,20 @@ const theme = createTheme({
           fontSize: '0.95rem',
         },
         containedPrimary: {
-          background: `linear-gradient(135deg, ${berryPalette.raspberry} 0%, ${berryPalette.berry} 100%)`,
-          boxShadow: `0 4px 16px ${alpha(berryPalette.raspberry, 0.4)}`,
+          background: `linear-gradient(135deg, ${skyPalette.sky} 0%, ${skyPalette.deepSky} 100%)`,
+          boxShadow: `0 4px 16px ${alpha(skyPalette.sky, 0.4)}`,
           '&:hover': {
-            background: `linear-gradient(135deg, ${berryPalette.berry} 0%, ${berryPalette.burgundy} 100%)`,
-            boxShadow: `0 6px 20px ${alpha(berryPalette.raspberry, 0.5)}`,
+            background: `linear-gradient(135deg, ${skyPalette.deepSky} 0%, ${skyPalette.twilight} 100%)`,
+            boxShadow: `0 6px 20px ${alpha(skyPalette.sky, 0.5)}`,
             transform: 'translateY(-1px)',
           },
         },
         outlinedPrimary: {
-          borderColor: berryPalette.raspberry,
-          color: berryPalette.raspberry,
+          borderColor: skyPalette.sky,
+          color: skyPalette.sky,
           '&:hover': {
-            borderColor: berryPalette.berry,
-            background: alpha(berryPalette.raspberry, 0.06),
+            borderColor: skyPalette.deepSky,
+            background: alpha(skyPalette.sky, 0.06),
           },
         },
       },
@@ -154,7 +155,7 @@ const theme = createTheme({
           fontWeight: 600,
         },
         colorPrimary: {
-          background: `linear-gradient(135deg, ${berryPalette.rose} 0%, ${berryPalette.raspberry} 100%)`,
+          background: `linear-gradient(135deg, ${skyPalette.brightSky} 0%, ${skyPalette.sky} 100%)`,
           color: '#fff',
         },
       },
@@ -165,13 +166,13 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 12,
-          background: 'rgba(255,255,255,0.7)',
+          background: 'rgba(255,255,255,0.78)',
           backdropFilter: 'blur(8px)',
           '&:hover .MuiOutlinedInput-notchedOutline': {
-            borderColor: berryPalette.raspberry,
+            borderColor: skyPalette.sky,
           },
           '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-            borderColor: berryPalette.raspberry,
+            borderColor: skyPalette.sky,
           },
         },
       },
@@ -181,7 +182,7 @@ const theme = createTheme({
     MuiTooltip: {
       styleOverrides: {
         tooltip: {
-          background: berryPalette.burgundy,
+          background: skyPalette.twilight,
           borderRadius: 8,
           fontSize: '0.8rem',
         },
@@ -193,7 +194,7 @@ const theme = createTheme({
       styleOverrides: {
         root: { borderRadius: 4, height: 6 },
         barColorPrimary: {
-          background: `linear-gradient(90deg, ${berryPalette.rose}, ${berryPalette.raspberry})`,
+          background: `linear-gradient(90deg, ${skyPalette.brightSky}, ${skyPalette.sky})`,
         },
       },
     },

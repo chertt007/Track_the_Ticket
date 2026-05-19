@@ -25,9 +25,9 @@ import { useT } from '../hooks/useT'
 import { useLocale } from '../hooks/useLocale'
 import { mockPriceHistory } from '../mocks/priceHistory'
 import { detailStyles as s } from './SubscriptionDetailPage.styles'
-import { berryPalette } from '../theme'
+import { skyPalette } from '../theme'
 
-// Custom recharts tooltip with berry styling
+// Custom recharts tooltip with sky styling
 function PriceTooltip({ active, payload, label }: {
   active?: boolean
   payload?: Array<{ value: number }>
@@ -108,21 +108,21 @@ export default function SubscriptionDetailPage() {
 
       {/* ── Stats row ──────────────────────────────────────────────────── */}
       <Box sx={s.statsRow}>
-        <Box sx={s.statCard(berryPalette.raspberry)}>
+        <Box sx={s.statCard(skyPalette.sky)}>
           <Typography variant="caption" color="text.secondary">{t('currentPrice')}</Typography>
-          <Typography sx={{ ...s.statValue, color: berryPalette.raspberry }}>
+          <Typography sx={{ ...s.statValue, color: skyPalette.sky }}>
             {currentPrice ? `${currentPrice.toLocaleString('ru-RU')} ₽` : '—'}
           </Typography>
         </Box>
-        <Box sx={s.statCard(berryPalette.berry)}>
+        <Box sx={s.statCard(skyPalette.deepSky)}>
           <Typography variant="caption" color="text.secondary">{t('minPrice')}</Typography>
-          <Typography sx={{ ...s.statValue, color: berryPalette.berry }}>
+          <Typography sx={{ ...s.statValue, color: skyPalette.deepSky }}>
             {minPrice ? `${minPrice.toLocaleString('ru-RU')} ₽` : '—'}
           </Typography>
         </Box>
-        <Box sx={s.statCard(berryPalette.burgundy)}>
+        <Box sx={s.statCard(skyPalette.twilight)}>
           <Typography variant="caption" color="text.secondary">{t('maxPrice')}</Typography>
-          <Typography sx={{ ...s.statValue, color: berryPalette.burgundy }}>
+          <Typography sx={{ ...s.statValue, color: skyPalette.twilight }}>
             {maxPrice ? `${maxPrice.toLocaleString('ru-RU')} ₽` : '—'}
           </Typography>
         </Box>
@@ -133,10 +133,10 @@ export default function SubscriptionDetailPage() {
         <Typography variant="h6" sx={s.sectionLabel}>{t('flightInfo')}</Typography>
 
         <Box sx={s.flightRouteRow}>
-          <FlightTakeoffIcon sx={{ color: berryPalette.rose, fontSize: 28 }} />
+          <FlightTakeoffIcon sx={{ color: skyPalette.brightSky, fontSize: 28 }} />
           <Typography sx={s.iataText}>{sub.originIata}</Typography>
           <Typography sx={s.arrowText}>→</Typography>
-          <FlightLandIcon sx={{ color: berryPalette.raspberry, fontSize: 28 }} />
+          <FlightLandIcon sx={{ color: skyPalette.sky, fontSize: 28 }} />
           <Typography sx={s.iataText}>{sub.destinationIata}</Typography>
         </Box>
 
@@ -171,7 +171,7 @@ export default function SubscriptionDetailPage() {
           </Typography>
           <Typography
             variant="caption"
-            sx={{ color: berryPalette.raspberry, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}
+            sx={{ color: skyPalette.sky, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}
           >
             {sub.sourceUrl}
           </Typography>
@@ -201,15 +201,15 @@ export default function SubscriptionDetailPage() {
           <Box sx={s.chartWrapper}>
             <ResponsiveContainer width="100%" height={240}>
               <LineChart data={chartData} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="4 4" stroke="rgba(155,27,90,0.1)" vertical={false} />
+                <CartesianGrid strokeDasharray="4 4" stroke="rgba(1,87,155,0.1)" vertical={false} />
                 <XAxis
                   dataKey="date"
-                  tick={{ fontSize: 11, fill: '#9e6070' }}
+                  tick={{ fontSize: 11, fill: '#3E6B8C' }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
-                  tick={{ fontSize: 11, fill: '#9e6070' }}
+                  tick={{ fontSize: 11, fill: '#3E6B8C' }}
                   axisLine={false}
                   tickLine={false}
                   tickFormatter={v => `${(v / 1000).toFixed(0)}к`}
@@ -219,7 +219,7 @@ export default function SubscriptionDetailPage() {
                 {minPrice && (
                   <ReferenceLine
                     y={minPrice}
-                    stroke={berryPalette.berry}
+                    stroke={skyPalette.deepSky}
                     strokeDasharray="3 3"
                     strokeOpacity={0.5}
                   />
@@ -227,10 +227,10 @@ export default function SubscriptionDetailPage() {
                 <Line
                   type="monotone"
                   dataKey="price"
-                  stroke={berryPalette.raspberry}
+                  stroke={skyPalette.sky}
                   strokeWidth={2.5}
-                  dot={{ r: 4, fill: '#fff', stroke: berryPalette.raspberry, strokeWidth: 2 }}
-                  activeDot={{ r: 6, fill: berryPalette.raspberry }}
+                  dot={{ r: 4, fill: '#fff', stroke: skyPalette.sky, strokeWidth: 2 }}
+                  activeDot={{ r: 6, fill: skyPalette.sky }}
                   connectNulls={false}
                 />
               </LineChart>

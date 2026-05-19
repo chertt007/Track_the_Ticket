@@ -17,6 +17,7 @@ import { setLanguage } from '../store/slices/settingsSlice'
 import { useT } from '../hooks/useT'
 import SettingsMenu from './SettingsMenu'
 import InstallPromptBanner from './InstallPromptBanner'
+import HeaderSkyWidget from './HeaderSkyWidget'
 import { layoutStyles as s } from './Layout.styles'
 
 export default function Layout() {
@@ -51,7 +52,14 @@ export default function Layout() {
   return (
     <Box sx={s.root}>
       <AppBar position="sticky" elevation={0}>
-        <Container maxWidth="lg">
+        {/* Floating clouds drifting across the header */}
+        <Box sx={s.cloudLayer}>
+          <Box sx={s.cloud(135, 38, '18%', 38, 0)} />
+          <Box sx={s.cloud(88, 27, '58%', 27, -13)} />
+          <Box sx={s.cloud(58, 18, '28%', 19, -7)} />
+        </Box>
+
+        <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
           <Toolbar disableGutters sx={s.toolbar}>
             {/* Logo */}
             <Box sx={s.logoBox} onClick={() => navigate('/dashboard')}>
@@ -60,6 +68,9 @@ export default function Layout() {
                 {t('appName')}
               </Typography>
             </Box>
+
+            {/* Sun / cloud / plane weather widget */}
+            <HeaderSkyWidget />
 
             {/* Nav links */}
             {navLinks.map(link => (

@@ -43,7 +43,7 @@ $bot = Start-Process -FilePath $venvPython `
 
 Write-Host "Starting Frontend (port 5173)..." -ForegroundColor Green
 $fe = Start-Process -FilePath "cmd" `
-    -ArgumentList "/C npm run dev" `
+    -ArgumentList "/C set NODE_OPTIONS=--experimental-global-webcrypto && npm run dev" `
     -WorkingDirectory "$root\frontend" `
     -PassThru -NoNewWindow
 

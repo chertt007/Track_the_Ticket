@@ -1,13 +1,13 @@
 import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material'
-import { berryPalette } from '../theme'
+import { skyPalette } from '../theme'
 
 const glassCard: SxProps<Theme> = {
   borderRadius: 4,
   background: 'rgba(255,255,255,0.75)',
   backdropFilter: 'blur(16px)',
-  border: `1px solid ${alpha(berryPalette.rose, 0.25)}`,
-  boxShadow: `0 4px 24px ${alpha(berryPalette.berry, 0.08)}`,
+  border: `1px solid ${alpha(skyPalette.brightSky, 0.25)}`,
+  boxShadow: `0 4px 24px ${alpha(skyPalette.deepSky, 0.08)}`,
   p: { xs: 2, sm: 3 },
   mb: 2.5,
 }
@@ -23,7 +23,7 @@ export const detailStyles = {
 
   backButton: {
     color: 'primary.dark',
-    '&:hover': { background: alpha(berryPalette.rose, 0.15) },
+    '&:hover': { background: alpha(skyPalette.brightSky, 0.15) },
   } as SxProps<Theme>,
 
   routeTitle: {
@@ -87,7 +87,7 @@ export const detailStyles = {
     alignItems: 'center',
     gap: 1,
     pt: 1.5,
-    borderTop: `1px solid ${alpha(berryPalette.rose, 0.2)}`,
+    borderTop: `1px solid ${alpha(skyPalette.brightSky, 0.2)}`,
   } as SxProps<Theme>,
 
   // ── Stats row ────────────────────────────────────────────────────────────
@@ -129,11 +129,11 @@ export const detailStyles = {
   // ── Chart tooltip ────────────────────────────────────────────────────────
   chartTooltip: {
     background: 'rgba(255,255,255,0.95)',
-    border: `1px solid ${berryPalette.rose}`,
+    border: `1px solid ${skyPalette.brightSky}`,
     borderRadius: 2,
     px: 1.5,
     py: 1,
-    boxShadow: `0 4px 16px ${alpha(berryPalette.berry, 0.15)}`,
+    boxShadow: `0 4px 16px ${alpha(skyPalette.deepSky, 0.15)}`,
   } as SxProps<Theme>,
 
   // ── Empty / not found states ─────────────────────────────────────────────

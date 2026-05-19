@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Sky blue rounded-square background -->
+  <rect width="24" height="24" rx="6" fill="#0288D1"/>
+  <!-- White airplane (top-down view, AirplanemodeActive icon path) -->
+  <path fill="white" d="M21 16l-9-9L3 16l1.5 1.5 5.5-5.5v11l2-2.5 2 2.5V12l5.5 5.5L21 16z"/>
+</svg>

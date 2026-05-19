@@ -1,14 +1,14 @@
 import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material'
-import { berryPalette } from '../theme'
+import { skyPalette } from '../theme'
 
 export const modalStyles = {
   paper: {
     borderRadius: 4,
-    background: 'rgba(255,255,255,0.85)',
+    background: 'rgba(255,255,255,0.88)',
     backdropFilter: 'blur(24px)',
-    border: `1px solid ${alpha(berryPalette.rose, 0.3)}`,
-    boxShadow: `0 20px 60px ${alpha(berryPalette.berry, 0.2)}`,
+    border: `1px solid ${alpha(skyPalette.brightSky, 0.3)}`,
+    boxShadow: `0 20px 60px ${alpha(skyPalette.deepSky, 0.2)}`,
   } as SxProps<Theme>,
 
   titleRow: {
@@ -21,7 +21,7 @@ export const modalStyles = {
     width: 36,
     height: 36,
     borderRadius: '50%',
-    background: `linear-gradient(135deg, ${berryPalette.rose}, ${berryPalette.raspberry})`,
+    background: `linear-gradient(135deg, ${skyPalette.brightSky}, ${skyPalette.sky})`,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -51,7 +51,6 @@ export const modalStyles = {
     fontSize: '0.85rem',
   } as SxProps<Theme>,
 
-  // Centered loading state
   parsingBox: {
     display: 'flex',
     flexDirection: 'column',
@@ -64,8 +63,8 @@ export const modalStyles = {
 
   confirmCard: {
     borderRadius: 3,
-    background: alpha(berryPalette.rose, 0.06),
-    border: `1px solid ${alpha(berryPalette.rose, 0.18)}`,
+    background: alpha(skyPalette.brightSky, 0.06),
+    border: `1px solid ${alpha(skyPalette.brightSky, 0.18)}`,
     p: 2.5,
     mb: 2.5,
   } as SxProps<Theme>,
@@ -85,7 +84,7 @@ export const modalStyles = {
   routeAirportCode: {
     fontSize: { xs: '2rem', sm: '2.25rem' },
     fontWeight: 800,
-    color: berryPalette.berry,
+    color: skyPalette.deepSky,
     letterSpacing: '-1px',
     lineHeight: 1,
   } as SxProps<Theme>,
@@ -98,7 +97,7 @@ export const modalStyles = {
   } as SxProps<Theme>,
 
   routeArrowIcon: {
-    color: alpha(berryPalette.raspberry, 0.45),
+    color: alpha(skyPalette.sky, 0.45),
     fontSize: 28,
   } as SxProps<Theme>,
 
@@ -131,7 +130,6 @@ export const modalStyles = {
   infoPriceValue: {
     fontSize: '0.9rem',
     fontWeight: 700,
-    color: berryPalette.raspberry,
+    color: skyPalette.sky,
   } as SxProps<Theme>,
-
 }

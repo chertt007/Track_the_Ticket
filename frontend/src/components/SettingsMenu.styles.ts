@@ -1,6 +1,6 @@
 import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material'
-import { berryPalette } from '../theme'
+import { skyPalette } from '../theme'
 
 export const settingsStyles = {
   iconButton: {
@@ -11,10 +11,10 @@ export const settingsStyles = {
     mt: 1,
     minWidth: 220,
     borderRadius: 3,
-    background: 'rgba(255,255,255,0.9)',
+    background: 'rgba(255,255,255,0.92)',
     backdropFilter: 'blur(20px)',
-    border: `1px solid ${alpha(berryPalette.rose, 0.3)}`,
-    boxShadow: `0 8px 32px ${alpha(berryPalette.berry, 0.18)}`,
+    border: `1px solid ${alpha(skyPalette.brightSky, 0.3)}`,
+    boxShadow: `0 8px 32px ${alpha(skyPalette.deepSky, 0.18)}`,
   } as SxProps<Theme>,
 
   headerBox: {

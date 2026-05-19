@@ -1,6 +1,6 @@
 import { alpha, keyframes } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material'
-import { berryPalette } from '../theme'
+import { skyPalette } from '../theme'
 
 const slideUp = keyframes`
   from { transform: translateY(100%); opacity: 0; }
@@ -16,8 +16,8 @@ export const installStyles = {
     zIndex: 1400,
     width: { xs: 'calc(100vw - 32px)', sm: 420 },
     borderRadius: 4,
-    background: `linear-gradient(135deg, ${berryPalette.berry}, ${berryPalette.burgundy})`,
-    boxShadow: `0 8px 32px ${alpha(berryPalette.burgundy, 0.5)}`,
+    background: `linear-gradient(135deg, ${skyPalette.deepSky}, ${skyPalette.twilight})`,
+    boxShadow: `0 8px 32px ${alpha(skyPalette.twilight, 0.5)}`,
     display: 'flex',
     alignItems: 'center',
     gap: 2,
