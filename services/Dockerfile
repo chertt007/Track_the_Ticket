@@ -15,6 +15,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Playwright Chromium + system libs (--with-deps handles apt packages on Bookworm)
 RUN playwright install chromium --with-deps
 
+# Virtual display for headed Chromium (HEADLESS=False in both price_checker and airline_url_finder)
+RUN apt-get update && apt-get install -y --no-install-recommends xvfb && rm -rf /var/lib/apt/lists/*
+
 # Application code: launcher at /app/run.py, packages under /app/
 COPY run.py ./
 COPY common/ ./common/
@@ -25,6 +28,9 @@ COPY notifier/ ./notifier/
 COPY scheduler/ ./scheduler/
 COPY agents/ ./agents/
 COPY price_checker/ ./price_checker/
+COPY entrypoint.sh ./
+
+RUN chmod +x entrypoint.sh
 
 EXPOSE 8000
-CMD ["python", "run.py"]
+CMD ["./entrypoint.sh"]
