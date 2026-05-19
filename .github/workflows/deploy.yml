@@ -25,6 +25,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Explicit builder avoids the "unknown blob" race condition in the
+      # default buildx instance when pushing provenance attestation manifests.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       # Compute lowercase image prefix: ghcr.io/owner/track-the-ticket
       - name: Set image prefix
         run: |
@@ -36,6 +41,7 @@ jobs:
         with:
           context: ./services
           push: true
+          provenance: false
           tags: |
             ${{ env.IMAGE_PREFIX }}/api:latest
             ${{ env.IMAGE_PREFIX }}/api:${{ github.sha }}
@@ -45,6 +51,7 @@ jobs:
         with:
           context: ./frontend
           push: true
+          provenance: false
           tags: |
             ${{ env.IMAGE_PREFIX }}/frontend:latest
             ${{ env.IMAGE_PREFIX }}/frontend:${{ github.sha }}
